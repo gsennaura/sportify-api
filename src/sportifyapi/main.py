@@ -3,7 +3,7 @@ from fastapi import FastAPI
 app = FastAPI(
     title="Tournament API",
     description="An API for managing tournaments",
-    version="0.1.0"
+    version="0.1.0",
 )
 
 

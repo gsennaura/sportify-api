@@ -1,0 +1,56 @@
+# Ignore Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ignore virtual environments
+.venv/
+env/
+venv/
+poetry.lock
+Pipfile
+Pipfile.lock
+
+# Ignore IDE/editor configurations
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignore logs and temp files
+*.log
+*.out
+*.bak
+*.swp
+*.swo
+*.tmp
+*.DS_Store
+
+# Ignore compiled libraries
+*.so
+*.dll
+*.dylib
+
+# Ignore environment variables and credentials
+.env
+*.env
+
+# Ignore database and migration files
+migrations/
+alembic.ini
+
+# Ignore Docker-related files
+*.db
+*.pid
+docker-compose.override.yml
+__docker_data__/
+pgdata/
+
+# Ignore pytest cache
+.pytest_cache/
+.coverage
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+.tox/

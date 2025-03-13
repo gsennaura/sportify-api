@@ -1,30 +1,14 @@
-CREATE TABLE uniform_brands (
+CREATE TABLE IF NOT EXISTS uniform_brands (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) UNIQUE NOT NULL
 );
 
-CREATE TABLE sponsors (
+CREATE TABLE IF NOT EXISTS sponsors (
     id SERIAL PRIMARY KEY,
     name VARCHAR(150) UNIQUE NOT NULL
 );
 
-CREATE TABLE entity_brand (
-    id SERIAL PRIMARY KEY,
-    entity_id INT NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
-    brand_id INT NOT NULL REFERENCES uniform_brands(id) ON DELETE CASCADE,
-    start_date DATE NOT NULL,
-    end_date DATE
-);
-
-CREATE TABLE entity_sponsor (
-    id SERIAL PRIMARY KEY,
-    entity_id INT NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
-    sponsor_id INT NOT NULL REFERENCES sponsors(id) ON DELETE CASCADE,
-    start_date DATE NOT NULL,
-    end_date DATE
-);
-
-CREATE TABLE entities (
+CREATE TABLE IF NOT EXISTS entities (
     id SERIAL PRIMARY KEY,
     name VARCHAR(150) NOT NULL UNIQUE,
     nickname VARCHAR(100),
@@ -42,12 +26,28 @@ CREATE TABLE entities (
 -- "FC Barcelona", Fundado em 1899, Barcelona, Espanha
 -- "Manchester United", Fundado em 1878, Manchester, Inglaterra
 
-CREATE TABLE roles (
+CREATE TABLE IF NOT EXISTS entity_sponsor (
+    id SERIAL PRIMARY KEY,
+    entity_id INT NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
+    sponsor_id INT NOT NULL REFERENCES sponsors(id) ON DELETE CASCADE,
+    start_date DATE NOT NULL,
+    end_date DATE
+);
+
+CREATE TABLE IF NOT EXISTS entity_brand (
+    id SERIAL PRIMARY KEY,
+    entity_id INT NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
+    brand_id INT NOT NULL REFERENCES uniform_brands(id) ON DELETE CASCADE,
+    start_date DATE NOT NULL,
+    end_date DATE
+);
+
+CREATE TABLE IF NOT EXISTS roles (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) UNIQUE NOT NULL
 );
 
-CREATE TABLE person_entity (
+CREATE TABLE IF NOT EXISTS person_entity (
     id SERIAL PRIMARY KEY,
     person_id INT NOT NULL REFERENCES people(id) ON DELETE CASCADE,
     entity_id INT NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
