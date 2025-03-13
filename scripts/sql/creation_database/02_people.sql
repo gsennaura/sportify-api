@@ -1,4 +1,4 @@
-CREATE TABLE people (
+CREATE TABLE IF NOT EXISTS people (
     id SERIAL PRIMARY KEY,
     full_name VARCHAR(150) NOT NULL,
     birth_date DATE NOT NULL,
@@ -13,7 +13,7 @@ CREATE TABLE people (
 -- "Lionel Messi", Nascido em: 24/06/1987, Cidade: Rosario (Argentina), Altura: 1.70m, Peso: 72kg
 -- "Neymar Jr", Nascido em: 05/02/1992, Cidade: Mogi das Cruzes (Brasil), Altura: 1.75m, Peso: 68kg
 
-CREATE TABLE person_social_links (
+CREATE TABLE IF NOT EXISTS person_social_links (
     id SERIAL PRIMARY KEY,
     person_id INT NOT NULL REFERENCES people(id) ON DELETE CASCADE,
     platform VARCHAR(50) NOT NULL,  -- Exemplo: "Instagram", "Twitter", "Facebook"
@@ -24,18 +24,18 @@ CREATE TABLE person_social_links (
 -- "Lionel Messi" -> Instagram: "https://instagram.com/messi"
 -- "Neymar Jr" -> Twitter: "https://twitter.com/neymarjr"
 
-CREATE TABLE characteristic_types (
+CREATE TABLE IF NOT EXISTS characteristic_types (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) UNIQUE NOT NULL
 );
 
-CREATE TABLE characteristics (
+CREATE TABLE IF NOT EXISTS characteristics (
     id SERIAL PRIMARY KEY,
     type_id INT NOT NULL REFERENCES characteristic_types(id) ON DELETE CASCADE,
     name VARCHAR(100) UNIQUE NOT NULL
 );
 
-CREATE TABLE person_characteristic (
+CREATE TABLE IF NOT EXISTS person_characteristic (
     person_id INT NOT NULL REFERENCES people(id) ON DELETE CASCADE,
     characteristic_id INT NOT NULL REFERENCES characteristics(id) ON DELETE CASCADE,
     PRIMARY KEY (person_id, characteristic_id)
@@ -45,7 +45,7 @@ CREATE TABLE person_characteristic (
 -- Tipos: "Físico", "Técnico", "Psicológico"
 -- Características: "Velocidade", "Força", "Precisão", "Resistência"
 
-CREATE TABLE person_country (
+CREATE TABLE IF NOT EXISTS person_country (
     person_id INT NOT NULL REFERENCES people(id) ON DELETE CASCADE,
     country_id INT NOT NULL REFERENCES countries(id) ON DELETE SET NULL,  -- Evita remoção acidental de países
     PRIMARY KEY (person_id, country_id)

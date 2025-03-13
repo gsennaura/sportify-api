@@ -3,7 +3,7 @@ version: '3.9'
 services:
   api:
     build: .
-    container_name: tournament-api
+    container_name: sportify-api
     ports:
       - "8000:8000"
     environment:
@@ -24,6 +24,7 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./scripts/sql/creation_database:/docker-entrypoint-initdb.d
 
 volumes:
   pgdata:

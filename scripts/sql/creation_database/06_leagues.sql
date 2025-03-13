@@ -1,4 +1,4 @@
-CREATE TABLE leagues (
+CREATE TABLE IF NOT EXISTS leagues (
     id SERIAL PRIMARY KEY,
     name VARCHAR(150) NOT NULL UNIQUE,
     federation_id INT REFERENCES federations(id) ON DELETE SET NULL, -- Federação ou entidade organizadora
@@ -12,7 +12,7 @@ CREATE TABLE leagues (
 -- "La Liga" - Organizada pela RFEF (Federação Espanhola)
 -- "Brasileirão" - Organizado pela CBF
 
-CREATE TABLE league_editions (
+CREATE TABLE IF NOT EXISTS league_editions (
     id SERIAL PRIMARY KEY,
     league_id INT NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
     sport_id INT NOT NULL REFERENCES sports(id) ON DELETE CASCADE,  -- Modalidade esportiva
@@ -32,7 +32,20 @@ CREATE TABLE league_editions (
 -- "Libertadores Feminina 2024" - Profissional, Feminino, Futebol
 -- "Olimpíadas 2024 - Atletismo" - Profissional, Misto, Atletismo
 
-CREATE TABLE league_committee (
+CREATE TABLE IF NOT EXISTS league_edition_groupings (
+    id SERIAL PRIMARY KEY,
+    league_edition_id INT NOT NULL REFERENCES league_editions(id) ON DELETE CASCADE,
+    phase VARCHAR(50) NOT NULL CHECK (phase IN ('group_stage', 'knockout', 'final')),
+    level INT NOT NULL CHECK (level > 0), -- Indica a ordem da fase na competição
+    classification_rule JSONB NOT NULL -- Define quantos se classificam nessa fase
+);
+
+-- Exemplos:
+-- "Fase de Grupos" -> Nível: 1, Classificam-se 2 por grupo
+-- "Quartas de Final" -> Nível: 2, Eliminatória
+-- "Final" -> Nível: 3, Apenas um jogo
+
+CREATE TABLE IF NOT EXISTS league_committee (
     id SERIAL PRIMARY KEY,
     league_edition_id INT NOT NULL REFERENCES league_editions(id) ON DELETE CASCADE,
     person_id INT NOT NULL REFERENCES people(id) ON DELETE CASCADE,
@@ -45,7 +58,7 @@ CREATE TABLE league_committee (
 -- "Diretor do Brasileirão 2024" -> Nome: "João Silva", Cargo: "Director"
 -- "Gestor de Arbitragem da Champions 2024" -> Nome: "Carlos Torres", Cargo: "Referee Manager"
 
-CREATE TABLE league_edition_teams (
+CREATE TABLE IF NOT EXISTS league_edition_teams (
     id SERIAL PRIMARY KEY,
     league_edition_id INT NOT NULL REFERENCES league_editions(id) ON DELETE CASCADE,
     team_id INT NOT NULL REFERENCES teams(id) ON DELETE CASCADE, -- Agora vinculamos o time, não apenas a entidade
@@ -57,7 +70,7 @@ CREATE TABLE league_edition_teams (
 -- "Flamengo" registrado na "Libertadores 2024" - Máximo: 30 jogadores
 -- "Barcelona" registrado na "La Liga 2023/24" - Máximo: 25 jogadores
 
-CREATE TABLE league_edition_standings (
+CREATE TABLE IF NOT EXISTS league_edition_standings (
     id SERIAL PRIMARY KEY,
     league_edition_id INT NOT NULL REFERENCES league_editions(id) ON DELETE CASCADE,
     team_id INT REFERENCES teams(id) ON DELETE CASCADE,
@@ -79,7 +92,7 @@ CREATE TABLE league_edition_standings (
 -- "Flamengo - Brasileirão 2024" -> 38 jogos, 22 vitórias, 3 empates, 13 derrotas, 69 pontos
 -- "Usain Bolt - 100m Olimpíadas 2024" -> 9.58 segundos, 1º lugar
 
-CREATE TABLE league_edition_group_participants (
+CREATE TABLE IF NOT EXISTS league_edition_group_participants (
     id SERIAL PRIMARY KEY,
     league_edition_grouping_id INT NOT NULL REFERENCES league_edition_groupings(id) ON DELETE CASCADE,
     team_id INT REFERENCES teams(id) ON DELETE CASCADE,
@@ -96,16 +109,3 @@ CREATE TABLE league_edition_group_participants (
     total_score DECIMAL(10,2) DEFAULT 0, -- Soma de pontos em ginástica, por exemplo
     ranking INT DEFAULT NULL -- Ranking dentro do grupo/fase
 );
-
-CREATE TABLE league_edition_groupings (
-    id SERIAL PRIMARY KEY,
-    league_edition_id INT NOT NULL REFERENCES league_editions(id) ON DELETE CASCADE,
-    phase VARCHAR(50) NOT NULL CHECK (phase IN ('group_stage', 'knockout', 'final')),
-    level INT NOT NULL CHECK (level > 0), -- Indica a ordem da fase na competição
-    classification_rule JSONB NOT NULL -- Define quantos se classificam nessa fase
-);
-
--- Exemplos:
--- "Fase de Grupos" -> Nível: 1, Classificam-se 2 por grupo
--- "Quartas de Final" -> Nível: 2, Eliminatória
--- "Final" -> Nível: 3, Apenas um jogo

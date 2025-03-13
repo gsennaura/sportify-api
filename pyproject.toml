@@ -12,7 +12,8 @@ dependencies = [
     "uvicorn[standard] (>=0.34.0,<0.35.0)",
     "sqlalchemy (>=2.0.38,<3.0.0)",
     "asyncpg (>=0.30.0,<0.31.0)",
-    "alembic (>=1.15.1,<2.0.0)"
+    "alembic (>=1.15.1,<2.0.0)",
+    "psycopg[binary] (>=3.2.6,<4.0.0)",
 ]
 
 [tool.poetry]
@@ -25,6 +26,8 @@ httpx = "^0.28.1"
 black = "^25.1.0"
 flake8 = "^7.1.2"
 isort = "^6.0.1"
+sqlacodegen = "^3.0.0"
+autoflake = "^2.3.1"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

@@ -1,9 +1,9 @@
-CREATE TABLE categories (
+CREATE TABLE IF NOT EXISTS categories (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE  -- Exemplo: "Sub-15", "Sub-17", "Profissional", "Amador"
 );
 
-CREATE TABLE teams (
+CREATE TABLE IF NOT EXISTS teams (
     id SERIAL PRIMARY KEY,
     entity_id INT NOT NULL REFERENCES entities(id) ON DELETE CASCADE,  -- Clube ou entidade dona do time
     name VARCHAR(100) NOT NULL,  -- Nome do time (ex: "Cruzeiro Sub-17 Azul")
@@ -18,7 +18,7 @@ CREATE TABLE teams (
 -- "Pinheiros Natação Elite" (Categoria: Profissional, Esporte: Natação)
 -- "Minas Tênis Clube Basquete" (Categoria: Profissional, Esporte: Basquete)
 
-CREATE TABLE team_players (
+CREATE TABLE IF NOT EXISTS team_players (
     id SERIAL PRIMARY KEY,
     team_id INT NOT NULL REFERENCES teams(id) ON DELETE CASCADE, -- Time ao qual pertence
     person_id INT NOT NULL REFERENCES people(id) ON DELETE CASCADE, -- Pessoa vinculada ao time

@@ -1,4 +1,12 @@
-CREATE TABLE federations (
+CREATE TABLE IF NOT EXISTS sports (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE
+);
+
+-- Exemplos:
+-- "Futebol", "Basquete", "Tênis", "Natação", "Atletismo"
+
+CREATE TABLE IF NOT EXISTS federations (
     id SERIAL PRIMARY KEY,
     name VARCHAR(150) NOT NULL UNIQUE,
     level VARCHAR(50) NOT NULL CHECK (level IN ('municipal', 'regional', 'state', 'national', 'continental', 'world')),
@@ -12,7 +20,7 @@ CREATE TABLE federations (
 -- "FIFA" (Federação Internacional de Futebol) - Nível Mundial
 -- "UEFA" (União das Federações Europeias de Futebol) - Nível Continental - Europa
 
-CREATE TABLE entity_federation (
+CREATE TABLE IF NOT EXISTS entity_federation (
     entity_id INT NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
     federation_id INT NOT NULL REFERENCES federations(id) ON DELETE CASCADE,
     PRIMARY KEY (entity_id, federation_id)
@@ -22,7 +30,7 @@ CREATE TABLE entity_federation (
 -- "Flamengo" -> Membro da "CBF"
 -- "Barcelona" -> Membro da "La Liga" (que está vinculada à RFEF e UEFA)
 
-CREATE TABLE federation_sport (
+CREATE TABLE IF NOT EXISTS federation_sport (
     federation_id INT NOT NULL REFERENCES federations(id) ON DELETE CASCADE,
     sport_id INT NOT NULL REFERENCES sports(id) ON DELETE CASCADE,
     PRIMARY KEY (federation_id, sport_id)
@@ -32,15 +40,8 @@ CREATE TABLE federation_sport (
 -- "CBF" -> Gerencia "Futebol"
 -- "FIVB" (Federação Internacional de Vôlei) -> Gerencia "Vôlei"
 
-CREATE TABLE sports (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL UNIQUE
-);
 
--- Exemplos:
--- "Futebol", "Basquete", "Tênis", "Natação", "Atletismo"
-
-CREATE TABLE person_federation (
+CREATE TABLE IF NOT EXISTS person_federation (
     id SERIAL PRIMARY KEY,
     person_id INT NOT NULL REFERENCES people(id) ON DELETE CASCADE,
     federation_id INT NOT NULL REFERENCES federations(id) ON DELETE CASCADE,
