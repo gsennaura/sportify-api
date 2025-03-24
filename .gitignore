@@ -33,7 +33,6 @@ Pipfile.lock
 
 # Ignore environment variables and credentials
 .env
-*.env
 
 # Ignore database and migration files
 migrations/
