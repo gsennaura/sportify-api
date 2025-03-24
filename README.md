@@ -59,35 +59,21 @@ http://localhost:8000/redoc
 
 ---
 
-## 🗃️ Project Structure
+## Generate Database Models (optional)
 
-```
-sportify-api/
-├── src/
-│   ├── api/
-│   │   ├── routers/
-│   │   ├── schemas/
-│   │   ├── models/
-│   │   ├── repositories/
-│   │   └── services/
-│   ├── core/
-│   │   ├── config.py
-│   │   └── database.py
-│   ├── main.py
-├── scripts/
-│   └── sql/
-│       └── creation_database/
-├── migrations/
-├── tests/
-├── Dockerfile
-├── docker-compose.yml
-├── pyproject.toml
-├── poetry.lock
-├── Makefile
-└── .flake8
+If you already have an existing database schema, you can generate your SQLAlchemy ORM models automatically:
+
+- Make sure the database is up and running using Docker:
+
+```bash
+make generate-models
 ```
 
----
+- This command will generate the SQLAlchemy models based on your existing PostgreSQL database schema and store them at:
+
+```bash
+src/sportifyapi/infrastructure/database/models/models.py
+```
 
 ## 📌 Database Migrations with Alembic
 
@@ -145,6 +131,75 @@ make test            # Run unit tests (pytest)
 make tidy            # Format & lint code automatically
 make check           # Run all checks (format + lint + test)
 ```
+
+---
+
+## 📂 Project Structure (Clean Architecture + DDD)
+
+This project follows a **Clean Architecture** and **Domain-Driven Design (DDD)** approach to provide clear separation of concerns, maintainability, and scalability:
+
+```bash
+src/
+└── sportifyapi/
+    ├── api/                          # HTTP Layer (FastAPI)
+    │   ├── controllers/              # Endpoints (API routes)
+    │   ├── schemas/                  # Pydantic Validations (API Contracts)
+    │   └── middlewares/              # Auth, Logs, HTTP errors treatment
+    │
+    ├── application/                  # Casos de Uso (Orquestração de regras de negócio)
+    │   ├── use_cases/                # Cada caso de uso claramente definido
+    │   └── services/                 # Regras de negócio e orquestração complexa
+    │
+    ├── domain/                       # Domínio puro (DDD)
+    │   ├── entities/                 # Entidades do domínio (Regras centrais)
+    │   ├── value_objects/            # Objetos de valor (DDD)
+    │   ├── repositories/             # Interfaces de repositório (abstrações)
+    │   └── exceptions/               # Exceções customizadas do domínio
+    │
+    ├── infrastructure/               # Implementações concretas
+    │   ├── database/                 # SQLAlchemy, Models e ORM
+    │   │   ├── alembic/              # Migrações do Alembic
+    │   │   ├── models/               # Modelos específicos para ORM
+    │   │   └── repositories/         # Implementações concretas dos repositorios
+    │   ├── cache/                    # Implementação Redis/Memcached
+    │   └── external_services/        # Integrações externas (API externas, AWS, etc.)
+    │
+    ├── core/                         # Configuração, logs, conexões globais
+    │   ├── config.py                 # Variáveis de ambiente, constantes
+    │   └── database.py               # Conexão com o banco, sessões ORM
+    │
+    ├── tests/                        # Testes unitários e integração
+    │   ├── unit/
+    │   └── integration/
+    │
+    └── main.py                       # Ponto de entrada da aplicação FastAPI
+
+
+```
+
+🧩 O que significa cada diretório (resumo):
+Diretório	Conteúdo	Relacionado a (Clean Arch/DDD)
+
+api/controllers	FastAPI endpoints (rotas HTTP)	Interface (adapters)
+api/schemas	Modelos de validação Pydantic (input/output API)	Interface (adapters)
+api/middlewares	Autenticação, logs, tratamento de erros	Interface (adapters)
+application/use_cases	Casos de uso que representam ações do usuário	Application Layer
+application/services	Serviços de negócios, orquestração	Application Layer
+domain/entities	Entidades com regras de negócio puras	Domain Layer (DDD)
+domain/value_objects	Objetos de valor	Domain Layer (DDD)
+domain/repositories	Interfaces abstratas de repositórios	Domain Layer (DDD)
+infrastructure/	Implementações concretas (ex: SQLAlchemy)	Infrastructure Layer (adapters)
+core/	Configuração global e conexões	Cross-Cutting Concerns
+tests/	Testes	Cross-Cutting Concerns
+
+---
+
+### Database Initialization Scripts
+
+SQL scripts used to initialize and populate the database for local development or testing environments.  
+Location:
+
+- scripts/sql/creation_database/
 
 ---
 

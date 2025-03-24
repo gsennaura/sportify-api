@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from sportifyapi.api.controllers.country_controller import router as country_router
 
 app = FastAPI(
     title="Tournament API",
@@ -10,3 +11,5 @@ app = FastAPI(
 @app.get("/")
 async def root():
     return {"message": "Welcome to the Tournament API!"}
+
+app.include_router(country_router)
