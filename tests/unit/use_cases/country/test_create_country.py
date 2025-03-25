@@ -1,5 +1,3 @@
-# tests/unit/use_cases/country/test_create_country.py
-
 import pytest
 from sportifyapi.application.use_cases.country.create_country import CreateCountryUseCase
 from sportifyapi.domain.entities.country import Country
