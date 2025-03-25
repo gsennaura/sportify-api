@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from sportifyapi.api.controllers.country_controller import router as country_router
+from sportifyapi.api.controllers.country.country_controller import router as country_router
 
 app = FastAPI(
     title="Tournament API",

@@ -71,3 +71,6 @@ rebuild:
 generate-models:
 	poetry run sqlacodegen $(DATABASE_SYNC_URL) --outfile src/sportifyapi/infrastructure/database/models/models.py
 	make tidy
+
+test-unit:
+	poetry run pytest tests/unit

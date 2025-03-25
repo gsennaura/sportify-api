@@ -203,6 +203,153 @@ Location:
 
 ---
 
+## 🧠 Domain-Driven Design + Clean Architecture: Countries Example
+
+This project applies **Domain-Driven Design (DDD)** and **Clean Architecture** principles to create a highly maintainable and scalable backend system.
+
+Let's walk through a real-world example: the `Country` entity and its complete **CRUD** implementation using:
+
+- DDD layers (Entity, Repository Interface, Use Cases)
+- Clean Architecture separation of concerns
+- SOLID principles (especially SRP and DIP)
+
+---
+
+### 🧱 Why This Structure?
+
+| Layer        | Responsibility                                        |
+|--------------|--------------------------------------------------------|
+| **Domain**   | Pure business rules, agnostic to frameworks/libraries |
+| **Application** | Orchestrates business logic via use cases           |
+| **Infrastructure** | Implements access to external systems (DB, APIs) |
+| **API**      | Handles HTTP logic (FastAPI routes/controllers)       |
+
+This separation makes testing easier, improves modularity, and decouples concerns.
+
+---
+
+### 🔍 Domain Layer
+
+#### `domain/entities/country.py`
+```python
+class Country:
+    def __init__(self, id: Optional[int], name: str, iso_code: str):
+        self.id = id
+        self.name = name
+        self.iso_code = iso_code
+```
+> ✅ Pure logic: no SQLAlchemy, no Pydantic. This is our business entity.
+
+#### `domain/repositories/country_repository_interface.py`
+```python
+class CountryRepositoryInterface(Protocol):
+    async def get_by_id(self, id: int) -> Optional[Country]: ...
+    async def get_all(self) -> List[Country]: ...
+    async def create(self, country: Country) -> Country: ...
+    async def delete(self, id: int) -> Optional[Country]: ...
+    async def update(self, id: int, data: dict) -> Optional[Country]: ...
+```
+> ✅ Defines **what** our repository should do, not **how**.
+
+---
+
+### 🧠 Application Layer
+
+#### Example: `application/use_cases/country/get_country_by_id.py`
+```python
+class GetCountryByIdUseCase:
+    def __init__(self, uow: UnitOfWork):
+        self.uow = uow
+
+    async def execute(self, country_id: int) -> Optional[Country]:
+        repo = self.uow.get_repository(CountryRepository)
+        return await repo.get_by_id(country_id)
+```
+> ✅ Encapsulates the business logic. Use Cases are action-focused (verbs). Easy to test.
+
+---
+
+### 🧱 Infrastructure Layer
+
+#### `infrastructure/database/repositories/country_repository.py`
+```python
+class CountryRepository(CountryRepositoryInterface):
+    def __init__(self, session: AsyncSession):
+        self.session = session
+        self.base_repo = BaseRepository(CountryModel, session)
+
+    async def get_by_id(self, id: int) -> Optional[Country]:
+        model = await self.base_repo.get_by_id(id)
+        return self._to_entity(model) if model else None
+
+    def _to_entity(self, model: CountryModel) -> Country:
+        return Country(id=model.id, name=model.name, iso_code=model.iso_code)
+```
+> ✅ This is the implementation that connects to the database (SQLAlchemy). It adapts the model to the domain entity.
+
+---
+
+### 🌐 API Layer
+
+#### `api/controllers/country_controller.py`
+```python
+@router.get("/{country_id}", response_model=CountryResponse)
+async def get_country_by_id(country_id: int):
+    async with get_unit_of_work() as uow:
+        use_case = GetCountryByIdUseCase(uow)
+        country = await use_case.execute(country_id)
+        if not country:
+            raise HTTPException(status_code=404, detail="Country not found")
+        return country
+```
+> ✅ The controller knows about **use cases**, not repositories or SQLAlchemy.
+
+---
+
+### 🧪 Bonus: Unit of Work (Transaction Management)
+
+```python
+class UnitOfWork:
+    def get_repository(self, repo_type):
+        ...
+
+@asynccontextmanager
+async def get_unit_of_work():
+    async for session in get_session():
+        uow = UnitOfWork(session)
+        try:
+            yield uow
+            await uow.commit()
+        except:
+            await uow.rollback()
+            raise
+        finally:
+            await uow.close()
+```
+> ✅ Guarantees atomic operations (single transaction). Useful for multiple inserts/updates.
+
+---
+
+### 🧰 Summary of What We've Done (Countries)
+
+- ✅ Created **Domain Entity** (`Country`)
+- ✅ Defined **Repository Interface** for abstraction
+- ✅ Built **Concrete Repository** to access the DB
+- ✅ Implemented **Use Cases** for each action (Get, Create, Update, Delete)
+- ✅ Created **Pydantic Schemas** for API validation
+- ✅ Connected it all via **Controllers** in the API
+
+---
+
+### ✅ Why This Matters
+
+- Clean code that's easy to **test, scale, and change**
+- Business logic is **decoupled from framework or DB**
+- Facilitates **unit testing** without mocks from infrastructure
+- Promotes **separation of concerns** and **open/closed** principle (SOLID)
+
+---
+
 ## 📝 Contribution Guidelines
 
 Please use clear commit messages in English following the [conventional commits](https://www.conventionalcommits.org/) standard.
