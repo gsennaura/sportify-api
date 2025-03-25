@@ -2,8 +2,8 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Type
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.sportifyapi.core.database import get_session
-from src.sportifyapi.infrastructure.database.repositories.base_repository import BaseRepository
+from sportifyapi.core.database import get_session
+from sportifyapi.infrastructure.database.repositories.base_repository import BaseRepository
 
 
 class UnitOfWork:

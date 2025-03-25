@@ -3,7 +3,7 @@ export
 
 # Makefile for SportifyAPI (Docker only)
 
-.PHONY: format lint test check docker-clean docker-build docker-up docker-down docker-prune docker-logs docker-exec
+.PHONY: format lint test check docker-clean docker-build docker-up docker-down docker-prune docker-logs docker-exec rebuild generate-models test-unit
 
 ## Run code formatting and cleanup:
 ## - Black: formats code to a consistent style (PEP8, 88-char line length)
@@ -25,9 +25,9 @@ format:
 lint:
 	poetry run flake8 --config=.flake8 src
 
-## Run tests inside Docker
+## Run tests inside Docker (ensures the PYTHONPATH is set correctly for tests)
 test:
-	poetry run pytest
+	poetry run pytest --maxfail=1 --disable-warnings --tb=short
 
 ## Run all checks (format + lint + test) inside Docker
 check: format lint test
@@ -60,17 +60,14 @@ docker-logs:
 docker-exec:
 	docker compose exec api bash
 
-rebuild:
-	make docker-down
-	make docker-clean
-	make docker-build
-	make docker-up
-	make docker-logs
-	
+## Rebuild the Docker environment and start containers
+rebuild: docker-down docker-clean docker-build docker-up docker-logs
+
 ## Generate models automatically based on the database schema
 generate-models:
 	poetry run sqlacodegen $(DATABASE_SYNC_URL) --outfile src/sportifyapi/infrastructure/database/models/models.py
 	make tidy
 
+## Unit tests (ensures the PYTHONPATH is set correctly)
 test-unit:
-	poetry run pytest tests/unit
+	PYTHONPATH=src poetry run pytest tests/unit
