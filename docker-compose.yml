@@ -7,7 +7,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/tournament_db
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/sportify
     volumes:
       - .:/app
     depends_on:
@@ -15,16 +15,25 @@ services:
 
   db:
     image: postgres:16-alpine
-    container_name: tournament-db
+    container_name: sportify-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: tournament_db
+      POSTGRES_DB: sportify
+      ENVIRONMENT: ${ENVIRONMENT:-development}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./scripts/sql/creation_database:/docker-entrypoint-initdb.d
+      - ./scripts/sql/creation_database/init-db.sh:/docker-entrypoint-initdb.d/00-init-db.sh
+      - ./scripts/sql/creation_database/01_location.sql:/docker-entrypoint-initdb.d/01_location.sql
+      - ./scripts/sql/creation_database/02_people.sql:/docker-entrypoint-initdb.d/02_people.sql
+      - ./scripts/sql/creation_database/03_organizations.sql:/docker-entrypoint-initdb.d/03_organizations.sql
+      - ./scripts/sql/creation_database/04_categories.sql:/docker-entrypoint-initdb.d/04_categories.sql
+      - ./scripts/sql/creation_database/05_teams.sql:/docker-entrypoint-initdb.d/05_teams.sql
+      - ./scripts/sql/creation_database/06_leagues.sql:/docker-entrypoint-initdb.d/06_leagues.sql
+      - ./scripts/sql/creation_database/07_matches.sql:/docker-entrypoint-initdb.d/07_matches.sql
+      - ./scripts/sql/creation_database/99_sample_data.sql:/docker-entrypoint-initdb.d/99_sample_data.sql
 
 volumes:
   pgdata:

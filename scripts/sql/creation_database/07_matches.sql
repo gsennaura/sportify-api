@@ -1,103 +1,65 @@
-CREATE TABLE IF NOT EXISTS matches (
+/*
+Match tables for SportifyAPI
+- Match scheduling and results
+- Player participation in matches
+- Match events and statistics
+*/
+
+-- Matches table - individual games/matches
+CREATE TABLE matches (
     id SERIAL PRIMARY KEY,
-    league_edition_grouping_id INT NOT NULL REFERENCES league_edition_groupings(id) ON DELETE CASCADE,
-    match_number INT DEFAULT NULL, -- Ex: Rodada 1, Quartas de Final (Pode ser NULL para eliminatórias diretas)
-    date TIMESTAMP NOT NULL,
-    location_id INT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
-    leg INT DEFAULT 1 CHECK (leg >= 1), -- Permite diferenciar ida e volta (1 = Ida, 2 = Volta, etc.)
-    status VARCHAR(20) NOT NULL CHECK (status IN ('scheduled', 'ongoing', 'completed', 'cancelled'))
+    league_id INTEGER NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+    home_team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
+    away_team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
+    match_number INTEGER, -- Round number or match identifier within competition
+    scheduled_datetime TIMESTAMP NOT NULL,
+    venue_id INTEGER REFERENCES venues(id) ON DELETE SET NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'scheduled' 
+        CHECK (status IN ('scheduled', 'ongoing', 'completed', 'postponed', 'cancelled')),
+    home_score INTEGER,
+    away_score INTEGER,
+    notes TEXT
 );
 
--- Exemplos:
--- "Flamengo x Palmeiras" - Rodada 5, Maracanã, 10/05/2024, Status: Completed
--- "Brasil x Argentina" - Final, Copa América, 15/07/2024, Status: Scheduled
-
-CREATE TABLE IF NOT EXISTS match_participants (
+-- Match squads - players selected for a match
+CREATE TABLE match_squads (
     id SERIAL PRIMARY KEY,
-    match_id INT NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
-    team_id INT REFERENCES teams(id) ON DELETE CASCADE, -- Preenchido se for esporte coletivo
-    player_id INT REFERENCES people(id) ON DELETE CASCADE, -- Preenchido se for esporte individual
-    position INT DEFAULT NULL CHECK (
-        (position IS NULL) OR (player_id IS NOT NULL AND team_id IS NULL)
-    ), -- Garante que apenas esportes individuais usam posição
-    score DECIMAL(10,2) DEFAULT NULL, -- Pode armazenar gols, tempo, pontos, etc.
-    score_type VARCHAR(20) NOT NULL CHECK (score_type IN ('none', 'goals', 'points', 'time', 'sets', 'distance')), -- Agora aceita 'none'
-    is_winner BOOLEAN DEFAULT FALSE -- Define se esse competidor venceu a partida
+    match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+    team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    jersey_number INTEGER CHECK (jersey_number > 0 AND jersey_number <= 99),
+    is_starter BOOLEAN DEFAULT false,
+    position VARCHAR(50),
+    UNIQUE(match_id, team_id, player_id)
 );
 
--- Exemplos:
--- "Flamengo x Palmeiras" -> Score: 2x1, Score Type: Goals
--- "Usain Bolt 100m Rasos" -> Tempo: 9.58s, Score Type: Time, Posição: 1º Lugar
-
-CREATE TABLE IF NOT EXISTS match_results (
+-- Match events - goals, cards, substitutions, etc.
+CREATE TABLE match_events (
     id SERIAL PRIMARY KEY,
-    match_id INT NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
-    winner_team_id INT REFERENCES teams(id) ON DELETE CASCADE,
-    winner_player_id INT REFERENCES people(id) ON DELETE CASCADE,
-    is_draw BOOLEAN DEFAULT FALSE, -- Indica empate em esportes coletivos
-    details JSONB -- Pode armazenar estatísticas adicionais (sets vencidos, tempo total, etc.)
+    match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+    team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    event_type VARCHAR(30) NOT NULL 
+        CHECK (event_type IN ('goal', 'assist', 'yellow_card', 'red_card', 'substitution_in', 
+                             'substitution_out', 'penalty_scored', 'penalty_missed', 'own_goal')),
+    minute INTEGER NOT NULL CHECK (minute >= 0),
+    additional_time INTEGER DEFAULT 0 CHECK (additional_time >= 0),
+    details JSONB
 );
 
--- Exemplos:
--- "Flamengo 2x2 Palmeiras" -> Empate
--- "Brasil x Argentina" -> Vitória do Brasil, Placar: 1x0
-
-CREATE TABLE IF NOT EXISTS match_reports (
+-- Match statistics - team and player statistics
+CREATE TABLE match_statistics (
     id SERIAL PRIMARY KEY,
-    match_id INT NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
-    report TEXT NOT NULL, -- Texto detalhado da súmula
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+    team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
+    player_id INTEGER REFERENCES players(id) ON DELETE CASCADE,
+    statistic_type VARCHAR(50) NOT NULL,
+    value NUMERIC(10,2) NOT NULL,
+    CHECK (team_id IS NOT NULL OR player_id IS NOT NULL)
 );
 
--- Exemplos:
--- "Relatório de Flamengo x Palmeiras: 2 expulsões, 1 pênalti convertido..."
--- "Relatório de Brasil x Argentina: Jogo pegado, gol no último minuto..."
-
-CREATE TABLE IF NOT EXISTS match_events (
-    id SERIAL PRIMARY KEY,
-    match_id INT NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
-    player_id INT NOT NULL REFERENCES people(id) ON DELETE CASCADE,
-    team_id INT REFERENCES teams(id) ON DELETE CASCADE,
-    event_type VARCHAR(20) NOT NULL CHECK (event_type IN ('goal', 'assist', 'yellow_card', 'red_card', 'substitution', 'foul')),
-    event_time INT NOT NULL, -- Minuto do evento
-    extra_info TEXT
-);
-
--- Exemplos:
--- "Gabigol" - Flamengo - Gol aos 72 minutos
--- "Casemiro" - Brasil - Cartão Amarelo aos 45 minutos
-
-CREATE TABLE IF NOT EXISTS match_player_statistics (
-    id SERIAL PRIMARY KEY,
-    match_id INT NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
-    player_id INT NOT NULL REFERENCES people(id) ON DELETE CASCADE,
-    team_id INT REFERENCES teams(id) ON DELETE CASCADE,
-    minutes_played INT NOT NULL DEFAULT 0,
-    goals INT NOT NULL DEFAULT 0,
-    assists INT NOT NULL DEFAULT 0,
-    shots INT NOT NULL DEFAULT 0,
-    passes INT NOT NULL DEFAULT 0,
-    fouls_committed INT NOT NULL DEFAULT 0,
-    yellow_cards INT NOT NULL DEFAULT 0,
-    red_cards INT NOT NULL DEFAULT 0
-);
-
--- Exemplos:
--- "Lionel Messi" - Jogo contra Real Madrid - 90 min, 2 gols, 1 assistência
--- "Cristiano Ronaldo" - Jogo contra Bayern - 88 min, 3 chutes, 1 gol
-
-CREATE TABLE IF NOT EXISTS match_scores (
-    id SERIAL PRIMARY KEY,
-    match_id INT NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
-    team_id INT REFERENCES teams(id) ON DELETE CASCADE,
-    player_id INT REFERENCES people(id) ON DELETE CASCADE,
-    period INT NOT NULL, -- Tempo do jogo, set, round, etc.
-    score INT NOT NULL
-);
-
--- Exemplos:
--- Flamengo 1º Tempo: 1 gol
--- Palmeiras 1º Tempo: 0 gols
--- Flamengo 2º Tempo: 1 gol
--- Palmeiras 2º Tempo: 1 gol
--- Resultado final: 2x1
+-- Add comments for documentation
+COMMENT ON TABLE matches IS 'Individual matches/games between teams';
+COMMENT ON TABLE match_squads IS 'Players selected for a match';
+COMMENT ON TABLE match_events IS 'Key events during matches like goals and cards';
+COMMENT ON TABLE match_statistics IS 'Statistical data from matches';

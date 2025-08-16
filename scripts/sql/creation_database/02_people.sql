@@ -1,56 +1,75 @@
-CREATE TABLE IF NOT EXISTS people (
+/*
+People and roles tables for SportifyAPI
+- Core people table for all individuals
+- Role definitions for different positions (player, coach, president, etc.)
+- Person-role relationships
+*/
+
+-- People table - core information for all individuals
+CREATE TABLE people (
     id SERIAL PRIMARY KEY,
-    full_name VARCHAR(150) NOT NULL,
-    birth_date DATE NOT NULL,
-    city_id INT REFERENCES cities(id) ON DELETE SET NULL,  -- Evita remoção acidental de cidades
-    height DECIMAL(4,2) CHECK (height > 0),  -- Garante que valores negativos não sejam inseridos
-    weight DECIMAL(5,2) CHECK (weight > 0),
-    official_website VARCHAR(255)
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    birth_date DATE,
+    gender VARCHAR(10) CHECK (gender IN ('male', 'female', 'other')),
+    nationality_id INTEGER REFERENCES countries(id) ON DELETE SET NULL,
+    birth_city_id INTEGER REFERENCES cities(id) ON DELETE SET NULL,
+    photo_url VARCHAR(255),
+    active BOOLEAN DEFAULT true
 );
 
--- Exemplos:
--- Pessoas:
--- "Lionel Messi", Nascido em: 24/06/1987, Cidade: Rosario (Argentina), Altura: 1.70m, Peso: 72kg
--- "Neymar Jr", Nascido em: 05/02/1992, Cidade: Mogi das Cruzes (Brasil), Altura: 1.75m, Peso: 68kg
+-- Create indexes for common queries
+CREATE INDEX idx_people_name ON people(last_name, first_name);
+CREATE INDEX idx_people_birth_date ON people(birth_date);
 
-CREATE TABLE IF NOT EXISTS person_social_links (
+-- Player-specific attributes
+CREATE TABLE players (
     id SERIAL PRIMARY KEY,
-    person_id INT NOT NULL REFERENCES people(id) ON DELETE CASCADE,
-    platform VARCHAR(50) NOT NULL,  -- Exemplo: "Instagram", "Twitter", "Facebook"
-    url VARCHAR(255) NOT NULL
+    person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+    height DECIMAL(5,2), -- in cm
+    weight DECIMAL(5,2), -- in kg
+    dominant_foot VARCHAR(10) CHECK (dominant_foot IN ('left', 'right', 'both')),
+    position VARCHAR(50),
+    active BOOLEAN DEFAULT true,
+    UNIQUE(person_id)
 );
 
--- Exemplos:
--- "Lionel Messi" -> Instagram: "https://instagram.com/messi"
--- "Neymar Jr" -> Twitter: "https://twitter.com/neymarjr"
-
-CREATE TABLE IF NOT EXISTS characteristic_types (
+-- Role types (used for both team and federation staff)
+CREATE TABLE role_types (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL
+    name VARCHAR(50) NOT NULL,
+    description TEXT,
+    category VARCHAR(20) NOT NULL CHECK (category IN ('player', 'technical', 'medical', 'management', 'administrative')),
+    active BOOLEAN DEFAULT true,
+    UNIQUE(name)
 );
 
-CREATE TABLE IF NOT EXISTS characteristics (
+-- Insert common role types
+INSERT INTO role_types (name, description, category) VALUES
+    ('Player', 'Active player on the field', 'player'),
+    ('Head Coach', 'Main team coach', 'technical'),
+    ('Assistant Coach', 'Assistant to the head coach', 'technical'),
+    ('Physical Trainer', 'Responsible for physical conditioning', 'technical'),
+    ('Team Doctor', 'Medical professional for the team', 'medical'),
+    ('Physiotherapist', 'Handles injuries and recovery', 'medical'),
+    ('President', 'Organization president', 'management'),
+    ('Vice President', 'Second in command', 'management'),
+    ('Director', 'Department director', 'management'),
+    ('Technical Director', 'Oversees technical aspects', 'management'),
+    ('Team Manager', 'Day-to-day team management', 'administrative'),
+    ('Secretary', 'Administrative support', 'administrative');
+
+-- Contact information for people
+CREATE TABLE contact_info (
     id SERIAL PRIMARY KEY,
-    type_id INT NOT NULL REFERENCES characteristic_types(id) ON DELETE CASCADE,
-    name VARCHAR(100) UNIQUE NOT NULL
+    person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+    type VARCHAR(20) NOT NULL CHECK (type IN ('email', 'phone', 'address', 'social')),
+    value TEXT NOT NULL,
+    is_primary BOOLEAN DEFAULT false,
+    active BOOLEAN DEFAULT true
 );
 
-CREATE TABLE IF NOT EXISTS person_characteristic (
-    person_id INT NOT NULL REFERENCES people(id) ON DELETE CASCADE,
-    characteristic_id INT NOT NULL REFERENCES characteristics(id) ON DELETE CASCADE,
-    PRIMARY KEY (person_id, characteristic_id)
-);
-
--- Exemplos:
--- Tipos: "Físico", "Técnico", "Psicológico"
--- Características: "Velocidade", "Força", "Precisão", "Resistência"
-
-CREATE TABLE IF NOT EXISTS person_country (
-    person_id INT NOT NULL REFERENCES people(id) ON DELETE CASCADE,
-    country_id INT NOT NULL REFERENCES countries(id) ON DELETE SET NULL,  -- Evita remoção acidental de países
-    PRIMARY KEY (person_id, country_id)
-);
-
--- Exemplos:
--- "Lionel Messi" -> País: Argentina (AR)
--- "Neymar Jr" -> País: Brasil (BR)
+-- Add comments for documentation
+COMMENT ON TABLE players IS 'Extended attributes specific to athletes';
+COMMENT ON TABLE role_types IS 'Different roles people can have in teams or federations';
+COMMENT ON TABLE contact_info IS 'Contact information for people';
