@@ -1,9 +1,9 @@
-include .env
+-include .env
 export
 
 # Makefile for SportifyAPI (Docker only)
 
-.PHONY: format lint test check docker-clean docker-build docker-up docker-down docker-prune docker-logs docker-exec rebuild generate-models test-unit
+.PHONY: format lint test check docker-clean docker-build docker-up docker-down docker-prune docker-logs docker-exec rebuild generate-models test-unit db-create db-reset db-connect db-diagram db-dump-schema db-dump-full check-prereqs
 
 ## Run code formatting and cleanup:
 ## - Black: formats code to a consistent style (PEP8, 88-char line length)
@@ -36,8 +36,12 @@ check: format lint test
 docker-build:
 	docker compose build
 
-## Start Docker containers
-docker-up:
+## Check prerequisites for SportifyAPI development
+check-prereqs:
+	@./scripts/check_prerequisites.sh
+
+## Start Docker containers (with prerequisites check)
+docker-up: check-prereqs
 	docker compose up --build -d
 
 ## Stop Docker containers
@@ -60,8 +64,8 @@ docker-logs:
 docker-exec:
 	docker compose exec api bash
 
-## Rebuild the Docker environment and start containers
-rebuild: docker-down docker-clean docker-build docker-up docker-logs
+## Rebuild the Docker environment and start containers (with prerequisites check)
+rebuild: check-prereqs docker-down docker-clean docker-build docker-up docker-logs
 
 ## Generate models automatically based on the database schema
 generate-models:
@@ -71,3 +75,44 @@ generate-models:
 ## Unit tests (ensures the PYTHONPATH is set correctly)
 test-unit:
 	PYTHONPATH=src poetry run pytest tests/unit
+
+## Create the database (starts PostgreSQL container only)
+db-create:
+	docker compose up -d db
+
+## Reset the database (removes volume and recreates)
+db-reset:
+	docker compose down
+	docker volume rm -f sportify-api_pgdata
+	docker compose up -d db
+
+## Connect to the database using psql
+db-connect:
+	docker compose exec db psql -U postgres -d sportify
+
+## Generate a database schema diagram (requires schemaspy)
+db-diagram:
+	mkdir -p ./docs/database
+	docker run --rm \
+		--network sportify-api_default \
+		-v "${PWD}/docs/database:/output" \
+		-e SCHEMASPY_OUTPUT_DIR=/output \
+		schemaspy/schemaspy:latest \
+		-t pgsql \
+		-host db \
+		-port 5432 \
+		-db sportify \
+		-u postgres \
+		-p postgres \
+		-s public
+	@echo "Schema diagram generated in docs/database/index.html"
+
+## Dump database schema (no data)
+db-dump-schema:
+	docker compose exec db pg_dump -U postgres -d sportify --schema-only > scripts/sql/schema_dump.sql
+	@echo "Schema dumped to scripts/sql/schema_dump.sql"
+
+## Dump database with data
+db-dump-full:
+	docker compose exec db pg_dump -U postgres -d sportify > scripts/sql/full_dump.sql
+	@echo "Full database dumped to scripts/sql/full_dump.sql"

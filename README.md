@@ -22,9 +22,19 @@ A professional backend API built with **FastAPI**, **PostgreSQL**, **SQLAlchemy*
 
 Before running the project, ensure you have these installed:
 
-- [Docker and Docker Compose](https://docs.docker.com/get-docker/)
-- [Poetry](https://python-poetry.org/docs/#installation) *(optional but recommended for dependency management outside Docker)*
+- **Python 3.12** or newer
+- **Docker and Docker Compose**
+- **Poetry** (for dependency management)
+- **PostgreSQL Client** (optional, as PostgreSQL runs in Docker)
 - Git
+
+You can verify your system meets all requirements by running:
+
+```bash
+make check-prereqs
+```
+
+This will check for all required dependencies and offer installation instructions for anything missing.
 
 ---
 
@@ -37,13 +47,33 @@ git clone git@github.com:gsennaura/sportify-api.git
 cd sportify-api
 ```
 
-### 2\. Start the application
+### 2\. Create environment variables file:
 
-Run Docker Compose to start API and PostgreSQL:
+Create a `.env` file by copying the example:
+
+```bash
+cp .env.example .env
+```
+
+Edit the `.env` file to customize your configuration if needed.
+
+### 3\. Check prerequisites and start the application
+
+First, check if your system meets all requirements:
+
+```bash
+make check-prereqs
+```
+
+This script will verify that you have all required dependencies and offer installation instructions for anything missing.
+
+Then start the application with Docker Compose:
 
 ```bash
 make docker-up
 ```
+
+Note: `make docker-up` will automatically run the prerequisites check before starting containers.
 
 Once running, the API will be accessible at:
 ```
@@ -118,7 +148,8 @@ make check  # Runs lint, format, and tests
 ### 🛠 **Available Makefile Commands**
 
 ```bash
-make docker-up       # Start containers
+make check-prereqs   # Check if all prerequisites are installed
+make docker-up       # Start containers (runs prerequisites check first)
 make docker-down     # Stop containers
 make docker-build    # Build Docker images
 make docker-clean    # Clean up unused Docker resources
@@ -131,6 +162,26 @@ make test            # Run unit tests (pytest)
 make tidy            # Format & lint code automatically
 make check           # Run all checks (format + lint + test)
 ```
+
+### 3\. Database Operations
+
+SportifyAPI provides several Make commands for database management:
+
+```bash
+# Start only the database container
+make db-create
+
+# Reset the database (removes and recreates)
+make db-reset
+
+# Connect to the database with psql
+make db-connect
+
+# Generate database schema documentation
+make db-diagram
+```
+
+The database is automatically created and populated with sample data when you run `make docker-up`. The database structure is defined in the SQL scripts located in `scripts/sql/creation_database/`.
 
 ---
 
@@ -194,12 +245,145 @@ tests/	Testes	Cross-Cutting Concerns
 
 ---
 
+## 🏗️ Project Architecture
+
+SportifyAPI follows Clean Architecture principles, with a clear separation of concerns across multiple layers:
+
+### Architectural Layers
+
+1. **Domain Layer** (`domain/`)
+   - Core business entities and logic
+   - Repository interfaces
+   - Independent of external frameworks
+
+2. **Application Layer** (`application/`)
+   - Use cases implementing business rules
+   - Orchestrates domain entities to perform tasks
+   - No dependencies on infrastructure
+
+3. **Infrastructure Layer** (`infrastructure/`)
+   - Database implementations
+   - External service adapters
+   - Repository implementations
+   - Framework-specific code
+
+4. **API Layer** (`api/`)
+   - Controllers handling HTTP requests
+   - Request/response serialization
+   - Input validation
+   - API documentation
+
+### Database Design
+
+The database schema is designed to handle complex sports management requirements:
+
+```
+Domain Entity            Database Tables
+─────────────            ───────────────
+Country        →         countries
+Person         →         people, contact_info
+Player         →         players, player_team_affiliations, player_achievements
+Team           →         teams, team_categories, team_staff
+League         →         leagues, league_teams, eligibility_rules
+Match          →         matches, match_squads, match_events, match_statistics
+```
+
+Key features include:
+
+- **Entity-Team Structure**: Organizations (entities) can have multiple teams
+- **Team Categories**: Teams can compete in multiple age groups/divisions
+- **Player Career Tracking**: Complete history of player movements with transfer details
+- **Flexible Competition Structure**: Various league formats and eligibility rules
+
+For detailed database documentation, see: `scripts/sql/creation_database/README.md`
+
+---
+
 ### Database Initialization Scripts
 
 SQL scripts used to initialize and populate the database for local development or testing environments.  
 Location:
 
 - scripts/sql/creation_database/
+
+---
+
+## 📊 Database Setup & Management
+
+### Docker Compose Setup
+
+The project uses Docker Compose to set up both the API and PostgreSQL database. When you run `docker-compose up`, the following happens:
+
+1. PostgreSQL container starts with the name `sportify-db`
+2. Database `sportify` is created with user `postgres` and password `postgres`
+3. All schema creation scripts are run in the correct order
+4. Sample data is loaded (in development environments only)
+
+### Database Structure
+
+The database follows a comprehensive schema designed for sports management:
+
+```
+Location Data → Organizations → Teams → Leagues → Matches
+     │               │            │        │         │
+     └───────────────┴────────────┼────────┼─────────┘
+                                  │        │
+                          Players & Staff  │
+                                  └────────┘
+```
+
+Our SQL scripts are organized in a logical sequence:
+
+- `01_location.sql`: Countries, states, cities, venues
+- `02_people.sql`: People records, players, roles
+- `03_organizations.sql`: Sports, entities, federations  
+- `04_categories.sql`: Age groups and competition levels
+- `05_teams.sql`: Teams, staff, player affiliations
+- `06_leagues.sql`: Leagues and eligibility rules
+- `07_matches.sql`: Matches, squads, events, statistics
+
+### Accessing & Managing the Database
+
+#### 1. Using Docker:
+
+```bash
+# Connect to the database container
+docker exec -it sportify-db psql -U postgres -d sportify
+
+# Basic commands in psql:
+# \dt - list tables
+# \d+ [table_name] - describe table
+# \q - quit
+```
+
+#### 2. Using a Database Tool:
+
+Connect to the database using tools like pgAdmin, DBeaver, or DataGrip with:
+- Host: localhost
+- Port: 5432
+- Database: sportify
+- Username: postgres
+- Password: postgres
+
+### Manual Database Reset
+
+If you need to reset the database:
+
+```bash
+# Stop containers first
+docker-compose down
+
+# Remove volume
+docker volume rm sportify-api_pgdata
+
+# Start again
+docker-compose up
+```
+
+### Working with the Schema
+
+For detailed information about the database schema, relationships, and sample queries, see:
+`scripts/sql/creation_database/README.md`
 
 ---
 
@@ -364,3 +548,85 @@ git commit -m "feat: add new endpoint for tournaments"
 ## 🛡️ License
 
 This project is under the MIT License. See [LICENSE](LICENSE) for more details.
+
+## 🗄️ Database Architecture
+
+### Overview
+
+SportifyAPI uses a sophisticated database structure designed specifically for sports management. The schema is organized around key entities like teams, players, leagues, and matches with carefully designed relationships.
+
+### Database Initialization Process
+
+When you run `make docker-up` (which executes `docker-compose up --build -d`), the database is automatically created and configured:
+
+1. **Container Creation**: Docker Compose starts the PostgreSQL container (`sportify-db`)
+
+2. **Database Creation**: PostgreSQL creates a database named `sportify` using the environment variables:
+   ```yaml
+   environment:
+     POSTGRES_USER: postgres
+     POSTGRES_PASSWORD: postgres
+     POSTGRES_DB: sportify
+   ```
+
+3. **Schema Initialization**: PostgreSQL executes scripts in `/docker-entrypoint-initdb.d/` in alphabetical order:
+   - `init-db.sh` orchestrates the execution of all SQL scripts
+   - SQL scripts create tables, relationships, constraints, and basic data
+   - Sample data is loaded (skipped in production environments)
+
+### Core Data Models
+
+#### Entity-Team Hierarchy
+
+The database models sports organizations using a hierarchical structure:
+
+1. **Entities (Organizations)**:
+   - Represent sports clubs, federations, and associations
+   - Store organization-level information (foundation date, location, etc.)
+   - Example: "FC Barcelona" (the club as an organization)
+
+2. **Teams**:
+   - Belong to entities via foreign key relationship (`entity_id`)
+   - Represent actual sporting teams within organizations
+   - Can have multiple categories (age groups/competition levels)
+   - Example: "FC Barcelona First Team" (the specific team in competitions)
+
+This allows modeling real-world structures like:
+```
+Entity: Flamengo Football Club (organization)
+├── Team: Flamengo Men (football team)
+│   ├── Category: Professional
+│   ├── Category: U20
+│   └── Category: U17
+└── Team: Flamengo Women (football team)
+    ├── Category: Professional
+    └── Category: U20
+```
+
+#### Player Career Management
+
+The schema tracks comprehensive player information:
+- Career history across multiple teams
+- Team changes with transfer details
+- Statistics by season and team
+- Achievements and awards
+
+#### Competition Structure
+
+Competitions are modeled with flexibility:
+- Leagues with different formats (round-robin, knockout, etc.)
+- Detailed match data including events and statistics
+- Configurable eligibility rules for player participation
+
+### Database Schema Documentation
+
+For a complete description of tables and relationships, see:
+`scripts/sql/creation_database/README.md`
+
+### Customizing the Database
+
+If you need to modify the database schema:
+
+1. Edit the SQL scripts in `scripts/sql/creation_database/`
+2. Adjust environment variables in `docker-compose.yml` if needed
+3. Run `make docker-down` followed by `make docker-up` to recreate the database
