@@ -1,470 +1,533 @@
 # SportifyAPI Database Schema
 
-This directory contains SQL scripts that create the SportifyAPI database structure. The scripts implement a comprehensive sports management system capable of handling teams, leagues, players, and matches with a focus on flexibility and detailed tracking.
+Este banco de dados implementa um sistema abrangente de gestão esportiva focado no futebol com relacionamentos adequados entre jogadores, equipes, organizações e federações.
 
-## Getting Started
+## 🗺️ Localização e Geografia
 
-To set up the SportifyAPI database:
-
-1. **Using Docker (Recommended)**:
-   ```bash
-   # From the project root directory
-   docker-compose up -d
-   ```
-   The database will be automatically created and initialized using the scripts in this directory.
-
-2. **Manual Setup** (if not using Docker):
-   ```bash
-   createdb sportify
-   
-   # Run scripts in sequence - order is important due to dependencies!
-   psql -d sportify -f 01_location.sql
-   psql -d sportify -f 02_people.sql
-   psql -d sportify -f 03_organizations.sql
-   psql -d sportify -f 04_categories.sql
-   psql -d sportify -f 05_teams.sql
-   psql -d sportify -f 06_leagues.sql
-   psql -d sportify -f 07_matches.sql
-   
-   # Optionally load sample data
-   psql -d sportify -f 99_sample_data.sql
-   ```
-
-> **Important Note**: There is a circular reference between `leagues` and `player_achievements` tables. The `player_achievements` table references `leagues`, which is created in a later script. PostgreSQL will handle this correctly when all scripts are run in sequence, but be aware of this dependency.
-
-## Core Business Concepts
-
-### Team Structure
-- **Teams** have a location and main stadium/venue
-- Teams belong to **Entities** (clubs, organizations)
-- One entity can have **multiple teams** across different sports and categories
-- Teams have **staff** (presidents, directors, coaches) which can be:
-  - Team-wide (e.g., president)
-  - Category-specific (e.g., U17 coach)
-- Teams have **players** (athletes)
-- Teams can have **multiple categories** (age groups/competition levels)
-
-### Player Affiliations
-- A player can represent **different categories** within the same team
-- A player can only play for **one team per league**
-- Whether a player can play for different teams in different leagues is **configurable**
-- Federation-level restrictions can be set
-- **Complete career history** tracking with:
-  - Previous teams and transfer details
-  - Achievements and statistics
-  - Contract information
-
-### Competition Organization
-- **Federations** organize leagues
-- **Leagues** contain teams competing in specific categories
-- **Matches** track detailed events and statistics
-
-## Database Files Structure
-
-| File | Purpose | Key Tables |
-|------|---------|------------|
-| `00_load_order.sql` | Documentation and load order | N/A |
-| `01_location.sql` | Geographic data and venues | `countries`, `states`, `cities`, `venues` |
-| `02_people.sql` | People records and roles | `people`, `players`, `role_types`, `contact_info` |
-| `03_organizations.sql` | Organizations and sports | `sports`, `entities`, `federations`, `organization_staff` |
-| `04_categories.sql` | Age groups and levels | `categories` |
-| `05_teams.sql` | Teams and affiliations | `teams`, `team_categories`, `team_staff`, `player_team_affiliations`, `player_achievements`, `player_career_statistics` |
-| `06_leagues.sql` | Leagues and eligibility | `leagues`, `league_teams`, `eligibility_rules`, `league_relationships` |
-| `07_matches.sql` | Match data | `matches`, `match_squads`, `match_events`, `match_statistics` |
-| `99_sample_data.sql` | Test data | (Inserts into all tables) |
-
-## Entity Relationship Overview
-
-The database schema follows a modular design with clear relationships between entities:
-
-```
-                                  ┌───────────┐
-                      ┌───────────┤ Countries │
-                      │           └───────────┘
-                      │                 │
-                      │                 ▼
-┌─────────┐     ┌─────┴─────┐     ┌──────────┐     ┌───────┐
-│ Sports  │────►│ Entities  │◄────┤  Cities  │────►│Venues │
-└─────────┘     └───────────┘     └──────────┘     └───────┘
-     │                │                                 │
-     │                ▼                                 │
-     │          ┌───────────┐                           │
-     └────────►│Federations│                           │
-               └───────────┘                           │
-                     │                                 │
-                     ▼                                 │
-┌─────────┐    ┌───────────┐                           │
-│Categories│◄───┤  Leagues  │                          │
-└─────────┘    └───────────┘                           │
-     │               │                                 │
-     │               ▼                                 │
-     │         ┌───────────┐                           │
-     └────────►│League Teams│                          │
-               └───────────┘                           │
-                     │                                 │
-                     │                                 │
-                     ▼                                 │
-┌─────────┐    ┌───────────┐                           │
-│  People  │◄───┤   Teams   │◄──────────────────────────┘
-└─────────┘    └───────────┘
-     │               │
-     │               ▼
-     │         ┌───────────────┐
-     └────────►│Team Categories│
-               └───────────────┘
-                     │
-                     ▼
-┌─────────┐    ┌───────────────────────┐    ┌────────────┐
-│ Players │◄───┤Player Team Affiliations│───►│  Matches   │
-└─────────┘    └───────────────────────┘    └────────────┘
-                           │                      │
-                           │                      ▼
-                           │                ┌────────────────┐
-                           └───────────────►│Match Statistics│
-                                            └────────────────┘
+```mermaid
+erDiagram
+    COUNTRIES {
+        int id PK
+        string name
+        string iso_code UK
+        bool active
+    }
+    
+    CITIES {
+        int id PK
+        string name
+        int country_id FK
+        bool active
+    }
+    
+    VENUES {
+        int id PK
+        string name
+        string address
+        int capacity
+        int city_id FK
+        bool active
+    }
+    
+    COUNTRIES ||--o{ CITIES : contains
+    CITIES ||--o{ VENUES : located_in
 ```
 
-## Key Features & Technical Details
+## 👥 Pessoas e Funções
 
-### Entity-Team Relationship
-
-The database uses a hierarchical structure for organizations and teams:
-
-1. **Entities (Organizations)**
-   - Represent clubs, federations, associations, etc.
-   - Store organization-level data like name, foundation date, country, logo
-
-2. **Teams**
-   - Have a foreign key `entity_id` linking to their parent entity
-   - Represent actual sporting teams that participate in competitions
-   - Can have multiple categories (Professional, U20, etc.)
-
-This enables:
-- One organization managing multiple teams
-- Teams sharing common organizational attributes
-- Federation-team-league relationships
-
-## Entity-Team Relationship in Detail
-
-The relationship between entities and teams is a key design feature of this database schema:
-
-### How It Works
-
-1. **Entities** (in `03_organizations.sql`) represent organizational bodies like:
-   - Sports clubs
-   - Federations
-   - Associations
-
-2. **Teams** (in `05_teams.sql`) represent the actual sporting teams:
-   - A team MUST belong to an entity (`entity_id` foreign key)
-   - A team is tied to a specific sport (`sport_id` foreign key)
-   - A team can have multiple categories (age groups/competition levels)
-
-### Examples
-
-Consider a large sports club organization like "FC Barcelona" that fields teams in multiple sports:
-
-```
-Entity: FC Barcelona (organization)
-├── Team: FC Barcelona (football/soccer team)
-│   ├── Category: Professional
-│   ├── Category: U21
-│   └── Category: Women's Team
-├── Team: FC Barcelona Basket (basketball team)
-│   ├── Category: Professional
-│   └── Category: Junior
-└── Team: FC Barcelona Handball (handball team)
-    └── Category: Professional
-```
-
-### SQL Structure
-
-This relationship is defined through these key fields:
-
-```sql
--- Entities table
-CREATE TABLE entities (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    type VARCHAR(20) NOT NULL CHECK (type IN ('club', 'federation', 'association', 'company', 'government')),
-    -- other fields
-);
-
--- Teams table
-CREATE TABLE teams (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    entity_id INTEGER NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
-    sport_id INTEGER NOT NULL REFERENCES sports(id) ON DELETE CASCADE,
-    -- other fields
-);
+```mermaid
+erDiagram
+    PEOPLE {
+        int id PK
+        string first_name
+        string last_name
+        date birth_date
+        string gender
+        int nationality_id FK
+        int birth_city_id FK
+        string phone
+        string email
+        bool active
+    }
+    
+    PLAYER_POSITIONS {
+        int id PK
+        string name UK
+        text description
+    }
+    
+    PLAYERS {
+        int id PK
+        int person_id FK
+        int position_id FK
+        int height_cm
+        int weight_kg
+        string preferred_foot
+        bool active
+    }
+    
+    ROLE_TYPES {
+        int id PK
+        string name UK
+        text description
+        string category
+        bool active
+    }
+    
+    STAFF {
+        int id PK
+        int person_id FK
+        int main_role_id FK
+        string document_number
+        text notes
+        bool active
+    }
+    
+    PEOPLE ||--o{ PLAYERS : extends
+    PEOPLE ||--o{ STAFF : extends
+    PLAYER_POSITIONS ||--o{ PLAYERS : defines_position
+    ROLE_TYPES ||--o{ STAFF : main_role
 ```
 
-### Design Benefits
+## 🏢 Organizações e Esportes
 
-This two-tier approach offers several advantages:
-
-1. **Organizational Accuracy**: Properly models real-world sports structures
-2. **Data Normalization**: Prevents duplication of organizational info
-3. **Flexibility**: Supports various organizational models (multi-sport clubs, single-team entities)
-4. **Unified Management**: Enables organization-wide operations and reporting
-
-If your use case only needs single teams without organizational hierarchy, you can simply create one entity per team.
-
-### Configurable Eligibility Rules
-The database supports complex eligibility rules for players:
-
-```sql
--- Example: Allow players to play in multiple leagues for same federation
-INSERT INTO eligibility_rules (federation_id, allow_cross_league) 
-VALUES ([federation_id], true);
-
--- Example: Restrict players to one team per federation
-INSERT INTO eligibility_rules (federation_id, allow_cross_team_within_federation) 
-VALUES ([federation_id], false);
+```mermaid
+erDiagram
+    SPORTS {
+        int id PK
+        string name UK
+        text description
+        bool team_based
+        bool active
+    }
+    
+    ENTITIES {
+        int id PK
+        string name
+        string short_name
+        string type
+        date foundation_date
+        int country_id FK
+        int city_id FK
+        bool active
+    }
+    
+    FEDERATIONS {
+        int id PK
+        string name
+        string acronym
+        int sport_id FK
+        string geographic_scope
+        int parent_federation_id FK
+        int country_id FK
+        date foundation_date
+        bool active
+    }
+    
+    CATEGORIES {
+        int id PK
+        string name UK
+        string short_name
+        text description
+        int min_age
+        int max_age
+        bool active
+    }
+    
+    SPORTS ||--o{ FEDERATIONS : governs
+    FEDERATIONS ||--o{ FEDERATIONS : parent_child
 ```
 
-### Common Queries and Use Cases
+## ⚽ Equipes
 
-```sql
--- Find all players for a team in a specific category
-SELECT p.first_name, p.last_name, pta.jersey_number
-FROM people p
-JOIN players pl ON p.id = pl.person_id
-JOIN player_team_affiliations pta ON pl.id = pta.player_id
-JOIN teams t ON pta.team_id = t.id
-JOIN categories c ON pta.category_id = c.id
-WHERE t.short_name = 'FLA'
-  AND c.short_name = 'PRO'
-  AND pta.status = 'active'
-  AND pta.season_year = 2023;
+```mermaid
+erDiagram
+    TEAMS {
+        int id PK
+        string name
+        string short_name
+        int entity_id FK
+        int sport_id FK
+        int category_id FK
+        int federation_id FK
+        date foundation_date
+        int city_id FK
+        int main_venue_id FK
+        bool active
+    }
+    
+    TRANSFER_TYPES {
+        int id PK
+        string name UK
+        text description
+    }
+    
+    TEAM_TRANSFERS {
+        int id PK
+        int player_id FK
+        int previous_team_id FK
+        int team_id FK
+        int next_team_id FK
+        date start_date
+        date end_date
+        string status
+        int transfer_type_id FK
+        decimal transfer_value
+        int season
+        text notes
+    }
+    
+    TEAM_STAFF_TRANSFERS {
+        int id PK
+        int staff_id FK
+        int previous_team_id FK
+        int team_id FK
+        int next_team_id FK
+        date start_date
+        date end_date
+        string status
+        int transfer_type_id FK
+        decimal transfer_value
+        int season
+        int role_id FK
+        text notes
+    }
+    
+    TRANSFER_TYPES ||--o{ TEAM_TRANSFERS : categorizes
+    TRANSFER_TYPES ||--o{ TEAM_STAFF_TRANSFERS : categorizes
 ```
 
-For additional queries, see the examples in each SQL file.
+## 🔗 Relacionamento: Organizações → Equipes
 
-## Useful Query Examples
-
-Here are some practical SQL queries for common operations with this database schema:
-
-### Team Management
-
-```sql
--- Get all teams for an entity (e.g., club) with their categories
-SELECT t.id, t.name, t.short_name, 
-       array_agg(DISTINCT c.name) as categories
-FROM teams t
-JOIN team_categories tc ON t.id = tc.team_id
-JOIN categories c ON tc.category_id = c.id
-WHERE t.entity_id = 1  -- Entity ID
-AND tc.season_year = 2023
-GROUP BY t.id, t.name, t.short_name;
-
--- Get all staff for a team, including category-specific roles
-SELECT p.first_name, p.last_name, 
-       rt.name as role,
-       c.name as category,
-       ts.start_date
-FROM team_staff ts
-JOIN people p ON ts.person_id = p.id
-JOIN role_types rt ON ts.role_id = rt.id
-LEFT JOIN team_categories tc ON ts.team_category_id = tc.id
-LEFT JOIN categories c ON tc.category_id = c.id
-WHERE ts.team_id = 1  -- Team ID
-ORDER BY rt.category, c.name NULLS FIRST;
+```mermaid
+erDiagram
+    ENTITIES {
+        int id PK
+        string name
+        string type
+        bool active
+    }
+    
+    SPORTS {
+        int id PK
+        string name UK
+        bool active
+    }
+    
+    FEDERATIONS {
+        int id PK
+        string name
+        string acronym
+        int sport_id FK
+        bool active
+    }
+    
+    CATEGORIES {
+        int id PK
+        string name UK
+        bool active
+    }
+    
+    TEAMS {
+        int id PK
+        string name
+        int entity_id FK
+        int sport_id FK
+        int category_id FK
+        int federation_id FK
+        bool active
+    }
+    
+    ENTITIES ||--o{ TEAMS : owns
+    SPORTS ||--o{ TEAMS : plays
+    CATEGORIES ||--o{ TEAMS : competes_in
+    FEDERATIONS ||--o{ TEAMS : registers
 ```
 
-### Player Operations
+## 🤝 Relacionamento: Pessoas → Equipes
 
-```sql
--- Get player career history
-SELECT p.first_name, p.last_name,
-       t.name as team_name,
-       c.name as category_name,
-       pta.start_date, pta.end_date,
-       pta.transfer_type, pta.transfer_fee
-FROM players pl
-JOIN people p ON pl.person_id = p.id
-JOIN player_team_affiliations pta ON pl.id = pta.player_id
-JOIN teams t ON pta.team_id = t.id
-JOIN categories c ON pta.category_id = c.id
-WHERE pl.id = 1  -- Player ID
-ORDER BY pta.start_date DESC;
-
--- Get player statistics
-SELECT t.name as team_name,
-       c.name as category_name,
-       pcs.season_year,
-       pcs.games_played,
-       pcs.goals_scored,
-       pcs.assists
-FROM player_career_statistics pcs
-JOIN player_team_affiliations pta ON pcs.affiliation_id = pta.id
-JOIN teams t ON pta.team_id = t.id
-JOIN categories c ON pta.category_id = c.id
-WHERE pcs.player_id = 1  -- Player ID
-ORDER BY pcs.season_year DESC;
+```mermaid
+erDiagram
+    PLAYERS {
+        int id PK
+        int person_id FK
+        bool active
+    }
+    
+    STAFF {
+        int id PK
+        int person_id FK
+        bool active
+    }
+    
+    TEAMS {
+        int id PK
+        string name
+        bool active
+    }
+    
+    PLAYER_TEAM_AFFILIATIONS {
+        int id PK
+        int player_id FK
+        int team_id FK
+        int team_transfer_id FK
+        string jersey_number
+        int contract_years
+        bool active
+        text notes
+    }
+    
+    TEAM_STAFF_AFFILIATIONS {
+        int id PK
+        int staff_id FK
+        int team_id FK
+        int team_staff_transfer_id FK
+        int role_id FK
+        int contract_years
+        bool active
+        text notes
+    }
+    
+    TEAM_TRANSFERS {
+        int id PK
+        int player_id FK
+        int team_id FK
+        date start_date
+        date end_date
+        string status
+    }
+    
+    TEAM_STAFF_TRANSFERS {
+        int id PK
+        int staff_id FK
+        int team_id FK
+        date start_date
+        date end_date
+        string status
+    }
+    
+    PLAYERS ||--o{ PLAYER_TEAM_AFFILIATIONS : affiliated_with
+    TEAMS ||--o{ PLAYER_TEAM_AFFILIATIONS : has_players
+    STAFF ||--o{ TEAM_STAFF_AFFILIATIONS : works_for
+    TEAMS ||--o{ TEAM_STAFF_AFFILIATIONS : employs
+    
+    TEAM_TRANSFERS ||--o{ PLAYER_TEAM_AFFILIATIONS : creates
+    TEAM_STAFF_TRANSFERS ||--o{ TEAM_STAFF_AFFILIATIONS : creates
 ```
 
-### Match & League Queries
+## 🏆 Competições e Ligas
 
-```sql
--- Get upcoming matches for a team
-SELECT l.name as league_name,
-       t_home.name as home_team,
-       t_away.name as away_team,
-       m.scheduled_datetime,
-       v.name as venue
-FROM matches m
-JOIN leagues l ON m.league_id = l.id
-JOIN teams t_home ON m.home_team_id = t_home.id
-JOIN teams t_away ON m.away_team_id = t_away.id
-LEFT JOIN venues v ON m.venue_id = v.id
-WHERE (m.home_team_id = 1 OR m.away_team_id = 1)  -- Team ID
-AND m.scheduled_datetime > CURRENT_TIMESTAMP
-ORDER BY m.scheduled_datetime;
-
--- Get league standings (example using match data)
-WITH team_results AS (
-    SELECT 
-        lt.league_id,
-        lt.team_category_id,
-        t.id as team_id,
-        t.name as team_name,
-        COUNT(m.id) as matches_played,
-        SUM(CASE WHEN (m.home_team_id = t.id AND m.home_score > m.away_score) OR 
-                      (m.away_team_id = t.id AND m.away_score > m.home_score) 
-                 THEN 1 ELSE 0 END) as wins,
-        SUM(CASE WHEN m.home_score = m.away_score THEN 1 ELSE 0 END) as draws,
-        SUM(CASE WHEN (m.home_team_id = t.id AND m.home_score < m.away_score) OR 
-                      (m.away_team_id = t.id AND m.away_score < m.home_score) 
-                 THEN 1 ELSE 0 END) as losses
-    FROM league_teams lt
-    JOIN team_categories tc ON lt.team_category_id = tc.id
-    JOIN teams t ON tc.team_id = t.id
-    LEFT JOIN matches m ON (m.league_id = lt.league_id AND (m.home_team_id = t.id OR m.away_team_id = t.id))
-    WHERE lt.league_id = 1  -- League ID
-    AND m.status = 'completed'
-    GROUP BY lt.league_id, lt.team_category_id, t.id, t.name
-)
-SELECT 
-    team_name,
-    matches_played,
-    wins,
-    draws,
-    losses,
-    (wins * 3 + draws) as points
-FROM team_results
-ORDER BY points DESC, wins DESC;
+```mermaid
+erDiagram
+    FEDERATIONS {
+        int id PK
+        string name
+        bool active
+    }
+    
+    LEAGUES {
+        int id PK
+        string name
+        int season_year
+        int federation_id FK
+        int sport_id FK
+        int category_id FK
+        date start_date
+        date end_date
+        string format
+        string status
+        bool active
+    }
+    
+    TEAMS {
+        int id PK
+        string name
+        bool active
+    }
+    
+    LEAGUE_TEAMS {
+        int id PK
+        int league_id FK
+        int team_id FK
+        date registration_date
+        string status
+    }
+    
+    FEDERATIONS ||--o{ LEAGUES : organizes
+    LEAGUES ||--o{ LEAGUE_TEAMS : contains
+    TEAMS ||--o{ LEAGUE_TEAMS : participates
 ```
 
-These queries demonstrate how to extract useful information from the SportifyAPI database structure for common sports management operations.
+## ⚽ Partidas e Eventos
 
-## Domain Entity Implementation Guide
-
-When implementing domain entities that map to this database schema, consider the following approach:
-
-### Recommended Domain Entities
-
-1. **Country**
-   ```python
-   @dataclass
-   class Country:
-       id: Optional[int]
-       name: str
-       iso_code: str
-       active: bool = True
-   ```
-
-2. **Team**
-   ```python
-   @dataclass
-   class Team:
-       id: Optional[int]
-       name: str
-       short_name: Optional[str]
-       entity_id: int
-       sport_id: int
-       foundation_date: Optional[date]
-       city_id: Optional[int]
-       main_venue_id: Optional[int]
-       categories: List['TeamCategory'] = field(default_factory=list)
-       active: bool = True
-   ```
-
-3. **Player**
-   ```python
-   @dataclass
-   class Player:
-       id: Optional[int]
-       person_id: int
-       height: Optional[float]
-       weight: Optional[float]
-       dominant_foot: Optional[str]
-       position: Optional[str]
-       active: bool = True
-       # Related data (to be loaded separately or via use case)
-       affiliations: List['PlayerTeamAffiliation'] = field(default_factory=list)
-       achievements: List['PlayerAchievement'] = field(default_factory=list)
-       statistics: List['PlayerCareerStatistics'] = field(default_factory=list)
-   ```
-
-### Repository Pattern
-
-Implement repositories using dependency inversion:
-
-1. Define repository interfaces in the domain layer
-2. Implement concrete repositories in the infrastructure layer
-3. Use a Unit of Work pattern for transaction management
-
-Example:
-
-```python
-# Domain layer
-class TeamRepositoryInterface(Protocol):
-    async def get_by_id(self, id: int) -> Optional[Team]: ...
-    async def list_all(self) -> List[Team]: ...
-    async def create(self, team: Team) -> Team: ...
-    # other methods...
-
-# Infrastructure layer
-class TeamRepository(BaseRepository):
-    async def get_by_id(self, id: int) -> Optional[Team]:
-        async with self.unit_of_work.connection() as connection:
-            result = await connection.fetchrow(
-                "SELECT * FROM teams WHERE id = $1", id
-            )
-            if not result:
-                return None
-            return Team(**dict(result))
-    # other methods...
+```mermaid
+erDiagram
+    TEAMS {
+        int id PK
+        string name
+        bool active
+    }
+    
+    LEAGUES {
+        int id PK
+        string name
+        bool active
+    }
+    
+    VENUES {
+        int id PK
+        string name
+        bool active
+    }
+    
+    STAFF {
+        int id PK
+        bool active
+    }
+    
+    MATCHES {
+        int id PK
+        int home_team_id FK
+        int away_team_id FK
+        int league_id FK
+        int venue_id FK
+        datetime match_date
+        int home_score
+        int away_score
+        string status
+        int referee_id FK
+        text notes
+    }
+    
+    PLAYERS {
+        int id PK
+        bool active
+    }
+    
+    PLAYER_SQUADS {
+        int id PK
+        int match_id FK
+        int player_id FK
+        int team_id FK
+        string squad_type
+        int jersey_number
+        int position_id FK
+        bool starter
+        text notes
+    }
+    
+    MATCH_EVENTS {
+        int id PK
+        int match_id FK
+        int player_id FK
+        int team_id FK
+        string event_type
+        int minute
+        int position_id FK
+        text description
+    }
+    
+    TEAMS ||--o{ MATCHES : home_team
+    TEAMS ||--o{ MATCHES : away_team
+    LEAGUES ||--o{ MATCHES : part_of
+    VENUES ||--o{ MATCHES : hosts
+    STAFF ||--o{ MATCHES : referees
+    
+    MATCHES ||--o{ PLAYER_SQUADS : squad_selection
+    PLAYERS ||--o{ PLAYER_SQUADS : selected_for
+    TEAMS ||--o{ PLAYER_SQUADS : represents
+    
+    MATCHES ||--o{ MATCH_EVENTS : contains_events
+    PLAYERS ||--o{ MATCH_EVENTS : participates_in
+    TEAMS ||--o{ MATCH_EVENTS : team_context
 ```
 
-### Many-To-Many Relationships
+## 🔄 Sistema de Transferências
 
-For complex relationships like player-team affiliations, consider these approaches:
-
-1. **Direct Model Mapping**: Create domain entities for each table
-2. **Aggregate Pattern**: Load related data as part of the aggregate root
-3. **Query Objects**: Create specialized objects for complex queries
-
-Remember to handle circular dependencies carefully, especially when implementing repositories for entities with complex relationships.
-
-## Database Management with Make
-
-The project includes several Make commands for database management:
-
-```bash
-# Start only the database
-make db-create
-
-# Reset the database (removes the volume and recreates)
-make db-reset
-
-# Connect to database with psql
-make db-connect
-
-# Generate database schema documentation
-make db-diagram
+```mermaid
+erDiagram
+    PLAYERS {
+        int id PK
+        bool active
+    }
+    
+    STAFF {
+        int id PK
+        bool active
+    }
+    
+    TEAMS {
+        int id PK
+        string name
+        bool active
+    }
+    
+    TRANSFER_TYPES {
+        int id PK
+        string name UK
+        text description
+    }
+    
+    TEAM_TRANSFERS {
+        int id PK
+        int player_id FK
+        int previous_team_id FK
+        int team_id FK
+        int next_team_id FK
+        date start_date
+        date end_date
+        string status
+        int transfer_type_id FK
+        decimal transfer_value
+        int season
+        text notes
+    }
+    
+    TEAM_STAFF_TRANSFERS {
+        int id PK
+        int staff_id FK
+        int previous_team_id FK
+        int team_id FK
+        int next_team_id FK
+        date start_date
+        date end_date
+        string status
+        int transfer_type_id FK
+        decimal transfer_value
+        int season
+        int role_id FK
+        text notes
+    }
+    
+    PLAYER_TEAM_AFFILIATIONS {
+        int id PK
+        int player_id FK
+        int team_id FK
+        int team_transfer_id FK
+        bool active
+    }
+    
+    TEAM_STAFF_AFFILIATIONS {
+        int id PK
+        int staff_id FK
+        int team_id FK
+        int team_staff_transfer_id FK
+        bool active
+    }
+    
+    TRANSFER_TYPES ||--o{ TEAM_TRANSFERS : categorizes
+    TRANSFER_TYPES ||--o{ TEAM_STAFF_TRANSFERS : categorizes
+    
+    PLAYERS ||--o{ TEAM_TRANSFERS : involves
+    TEAMS ||--o{ TEAM_TRANSFERS : previous_team
+    TEAMS ||--o{ TEAM_TRANSFERS : current_team
+    TEAMS ||--o{ TEAM_TRANSFERS : next_team
+    
+    STAFF ||--o{ TEAM_STAFF_TRANSFERS : involves
+    TEAMS ||--o{ TEAM_STAFF_TRANSFERS : previous_team
+    TEAMS ||--o{ TEAM_STAFF_TRANSFERS : current_team
+    TEAMS ||--o{ TEAM_STAFF_TRANSFERS : next_team
+    
+    TEAM_TRANSFERS ||--o{ PLAYER_TEAM_AFFILIATIONS : creates
+    TEAM_STAFF_TRANSFERS ||--o{ TEAM_STAFF_AFFILIATIONS : creates
 ```
-
-These commands simplify common database operations during development.

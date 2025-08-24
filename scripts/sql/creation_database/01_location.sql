@@ -5,7 +5,7 @@ Location tables for SportifyAPI
 */
 
 -- Countries table
-CREATE TABLE countries (
+CREATE TABLE IF NOT EXISTS countries (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     iso_code CHAR(2) UNIQUE NOT NULL,
@@ -13,7 +13,7 @@ CREATE TABLE countries (
 );
 
 -- States/provinces table
-CREATE TABLE states (
+CREATE TABLE IF NOT EXISTS states (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     abbreviation VARCHAR(5) NOT NULL,
@@ -23,7 +23,7 @@ CREATE TABLE states (
 );
 
 -- Cities table
-CREATE TABLE cities (
+CREATE TABLE IF NOT EXISTS cities (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     state_id INTEGER REFERENCES states(id) ON DELETE SET NULL,
@@ -31,7 +31,7 @@ CREATE TABLE cities (
 );
 
 -- Venues table (stadiums, arenas, etc.)
-CREATE TABLE venues (
+CREATE TABLE IF NOT EXISTS venues (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     capacity INTEGER,
