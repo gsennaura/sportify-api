@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   api:
     build: .
@@ -25,7 +23,7 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./scripts/sql/creation_database/init-db.sh:/docker-entrypoint-initdb.d/00-init-db.sh
+      - ./scripts/sql/creation_database/migrate-db.sh:/docker-entrypoint-initdb.d/00-migrate-db.sh
       - ./scripts/sql/creation_database/01_location.sql:/docker-entrypoint-initdb.d/01_location.sql
       - ./scripts/sql/creation_database/02_people.sql:/docker-entrypoint-initdb.d/02_people.sql
       - ./scripts/sql/creation_database/03_organizations.sql:/docker-entrypoint-initdb.d/03_organizations.sql

@@ -113,11 +113,12 @@ INSERT INTO entities (name, short_name, type, country_id, city_id) VALUES
     ('Palmeiras Futebol Clube', 'Palmeiras', 'club', (SELECT id FROM countries WHERE iso_code = 'BR'), (SELECT id FROM cities WHERE name = 'São Paulo'))
 ON CONFLICT DO NOTHING;
 
-INSERT INTO teams (name, short_name, entity_id, sport_id, category_id, city_id) VALUES
+INSERT INTO teams (name, short_name, entity_id, sport_id, category_id, federation_id, city_id) VALUES
     ('Palmeiras', 'PAL', 
      (SELECT id FROM entities WHERE short_name = 'Palmeiras'), 
      (SELECT id FROM sports WHERE name = 'Futebol'),
      (SELECT id FROM categories WHERE short_name = 'PRO'),
+     (SELECT id FROM federations WHERE acronym = 'CBF'),
      (SELECT id FROM cities WHERE name = 'São Paulo'))
 ON CONFLICT DO NOTHING;
 

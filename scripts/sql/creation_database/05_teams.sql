@@ -24,6 +24,23 @@ CREATE TABLE IF NOT EXISTS teams (
     CONSTRAINT unique_team_name UNIQUE (entity_id, name, sport_id, category_id)
 );
 
+-- Transfer types table (must be created BEFORE any transfer tables)
+CREATE TABLE IF NOT EXISTS transfer_types (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(30) NOT NULL UNIQUE,
+    description TEXT
+);
+
+-- Insert default transfer types (in Portuguese)
+INSERT INTO transfer_types (name, description) VALUES
+    ('Venda', 'Transferência definitiva mediante pagamento'),
+    ('Empréstimo', 'Transferência temporária para outro clube'),
+    ('Livre', 'Jogador sem contrato, chega sem custos'),
+    ('Retorno de Empréstimo', 'Jogador retorna de empréstimo'),
+    ('Promoção', 'Promoção da base para o profissional'),
+    ('Troca', 'Transferência por troca de jogadores')
+ON CONFLICT (name) DO NOTHING;
+
 -- Team staff transfers table (staff movements between teams)
 CREATE TABLE IF NOT EXISTS team_staff_transfers (
     id SERIAL PRIMARY KEY,
@@ -50,26 +67,8 @@ CREATE TABLE IF NOT EXISTS team_staff_affiliations (
     role_id INTEGER NOT NULL REFERENCES role_types(id) ON DELETE CASCADE,
     contract_years INTEGER,
     active BOOLEAN DEFAULT true,
-    notes TEXT,
-    UNIQUE(staff_id, team_id, role_id, COALESCE(team_staff_transfer_id, -1))
+    notes TEXT
 );
-
--- Transfer types table
-CREATE TABLE IF NOT EXISTS transfer_types (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(30) NOT NULL UNIQUE,
-    description TEXT
-);
-
--- Insert default transfer types (in Portuguese)
-INSERT INTO transfer_types (name, description) VALUES
-    ('Venda', 'Transferência definitiva mediante pagamento'),
-    ('Empréstimo', 'Transferência temporária para outro clube'),
-    ('Livre', 'Jogador sem contrato, chega sem custos'),
-    ('Retorno de Empréstimo', 'Jogador retorna de empréstimo'),
-    ('Promoção', 'Promoção da base para o profissional'),
-    ('Troca', 'Transferência por troca de jogadores')
-ON CONFLICT (name) DO NOTHING;
 
 -- Team transfers table (player movements between teams)
 CREATE TABLE IF NOT EXISTS team_transfers (
@@ -96,12 +95,28 @@ CREATE TABLE IF NOT EXISTS player_team_affiliations (
     jersey_number INTEGER CHECK (jersey_number > 0 AND jersey_number <= 999),
     contract_years INTEGER,
     active BOOLEAN DEFAULT true,
-    notes TEXT,
-    UNIQUE(player_id, team_id, COALESCE(team_transfer_id, -1))
+    notes TEXT
 );
 
 -- Remove player_achievements and player_career_statistics tables
 -- Remove player_career_history view
+
+-- Create indexes for team affiliations to ensure unique combinations
+CREATE UNIQUE INDEX idx_team_staff_unique_no_transfer 
+    ON team_staff_affiliations(staff_id, team_id, role_id) 
+    WHERE team_staff_transfer_id IS NULL;
+
+CREATE UNIQUE INDEX idx_team_staff_unique_with_transfer 
+    ON team_staff_affiliations(staff_id, team_id, role_id, team_staff_transfer_id) 
+    WHERE team_staff_transfer_id IS NOT NULL;
+
+CREATE UNIQUE INDEX idx_player_team_unique_no_transfer 
+    ON player_team_affiliations(player_id, team_id) 
+    WHERE team_transfer_id IS NULL;
+
+CREATE UNIQUE INDEX idx_player_team_unique_with_transfer 
+    ON player_team_affiliations(player_id, team_id, team_transfer_id) 
+    WHERE team_transfer_id IS NOT NULL;
 
 -- Add comments for documentation
 COMMENT ON TABLE teams IS 'Sports teams that can participate in competitions. Each team must be registered with a federation to participate in official competitions.';

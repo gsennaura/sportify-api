@@ -56,17 +56,6 @@ CREATE TABLE IF NOT EXISTS players (
     UNIQUE(person_id)
 );
 
--- Staff-specific attributes (extends people)
-CREATE TABLE IF NOT EXISTS staff (
-    id SERIAL PRIMARY KEY,
-    person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
-    main_role_id INTEGER REFERENCES role_types(id) ON DELETE SET NULL, -- Main function/role of the staff
-    document_number VARCHAR(30), -- Optional: staff-specific document/registration
-    notes TEXT, -- Optional: extra info about the staff
-    active BOOLEAN DEFAULT true,
-    UNIQUE(person_id)
-);
-
 -- Role types (used for both team and federation staff)
 CREATE TABLE IF NOT EXISTS role_types (
     id SERIAL PRIMARY KEY,
@@ -79,19 +68,30 @@ CREATE TABLE IF NOT EXISTS role_types (
 
 -- Insert common role types
 INSERT INTO role_types (name, description, category) VALUES
-    ('Jogador', 'Jogador ativo em campo', 'player'),
-    ('Técnico Principal', 'Técnico principal do time', 'technical'),
-    ('Auxiliar Técnico', 'Auxiliar do técnico principal', 'technical'),
+    ('Técnico Principal', 'Treinador principal da equipe', 'technical'),
+    ('Auxiliar Técnico', 'Assistente do técnico principal', 'technical'),
     ('Preparador Físico', 'Responsável pelo condicionamento físico', 'technical'),
-    ('Médico do Time', 'Profissional médico do time', 'medical'),
-    ('Fisioterapeuta', 'Cuida de lesões e recuperação', 'medical'),
-    ('Presidente', 'Presidente da organização', 'management'),
-    ('Vice-Presidente', 'Segundo no comando', 'management'),
-    ('Diretor', 'Diretor de departamento', 'management'),
-    ('Diretor Técnico', 'Supervisiona aspectos técnicos', 'management'),
-    ('Gerente de Time', 'Gestão do dia a dia do time', 'administrative'),
-    ('Secretário', 'Apoio administrativo', 'administrative')
+    ('Goleiro Técnico', 'Treinador especializado em goleiros', 'technical'),
+    ('Médico', 'Responsável pela saúde dos atletas', 'medical'),
+    ('Fisioterapeuta', 'Tratamento e reabilitação', 'medical'),
+    ('Nutricionista', 'Orientação nutricional', 'medical'),
+    ('Presidente', 'Presidente do clube', 'management'),
+    ('Vice-Presidente', 'Vice-presidente do clube', 'management'),
+    ('Diretor Esportivo', 'Responsável pelo departamento esportivo', 'management'),
+    ('Gerente de Futebol', 'Gestor das operações futebolísticas', 'management'),
+    ('Secretário', 'Responsável por questões administrativas', 'administrative')
 ON CONFLICT (name) DO NOTHING;
+
+-- Staff-specific attributes (extends people) - NOW AFTER role_types is created
+CREATE TABLE IF NOT EXISTS staff (
+    id SERIAL PRIMARY KEY,
+    person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+    main_role_id INTEGER REFERENCES role_types(id) ON DELETE SET NULL, -- Main function/role of the staff
+    document_number VARCHAR(30), -- Optional: staff-specific document/registration
+    notes TEXT, -- Optional: extra info about the staff
+    active BOOLEAN DEFAULT true,
+    UNIQUE(person_id)
+);
 
 -- Contact information for people
 CREATE TABLE IF NOT EXISTS contact_info (
@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS contact_info (
 );
 
 -- Add comments for documentation
+COMMENT ON TABLE people IS 'Core table for all individuals in the system';
 COMMENT ON TABLE players IS 'Extended attributes specific to athletes';
 COMMENT ON TABLE staff IS 'Staff members (coaches, directors, etc), extends people';
 COMMENT ON TABLE role_types IS 'Different roles people can have in teams or federations';
