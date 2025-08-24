@@ -23,15 +23,11 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./scripts/sql/creation_database/migrate-db.sh:/docker-entrypoint-initdb.d/00-migrate-db.sh
-      - ./scripts/sql/creation_database/01_location.sql:/docker-entrypoint-initdb.d/01_location.sql
-      - ./scripts/sql/creation_database/02_people.sql:/docker-entrypoint-initdb.d/02_people.sql
-      - ./scripts/sql/creation_database/03_organizations.sql:/docker-entrypoint-initdb.d/03_organizations.sql
-      - ./scripts/sql/creation_database/04_categories.sql:/docker-entrypoint-initdb.d/04_categories.sql
-      - ./scripts/sql/creation_database/05_teams.sql:/docker-entrypoint-initdb.d/05_teams.sql
-      - ./scripts/sql/creation_database/06_leagues.sql:/docker-entrypoint-initdb.d/06_leagues.sql
-      - ./scripts/sql/creation_database/07_matches.sql:/docker-entrypoint-initdb.d/07_matches.sql
-      - ./scripts/sql/creation_database/99_sample_data.sql:/docker-entrypoint-initdb.d/99_sample_data.sql
+      - ./scripts/sql/creation_database/001_federations.sql:/docker-entrypoint-initdb.d/001_federations.sql
+      - ./scripts/sql/creation_database/002_people.sql:/docker-entrypoint-initdb.d/002_people.sql
+      - ./scripts/sql/creation_database/003_teams.sql:/docker-entrypoint-initdb.d/003_teams.sql
+      - ./scripts/sql/creation_database/004_sample_data.sql:/docker-entrypoint-initdb.d/004_sample_data.sql
+      - ./scripts/sql/creation_database/validate_db.sql:/docker-entrypoint-initdb.d/validate_db.sql
 
 volumes:
   pgdata:
