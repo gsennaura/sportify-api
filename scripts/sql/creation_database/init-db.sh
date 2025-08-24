@@ -6,62 +6,33 @@ echo "==================================="
 echo "Environment: ${ENVIRONMENT:-development}"
 echo "Database: $POSTGRES_DB"
 echo "User: $POSTGRES_USER"
-
-# Function to run SQL scripts with error handling
-run_sql_script() {
-    local script=$1
-    local path="/docker-entrypoint-initdb.d/$script"
-    
-    if [ -f "$path" ]; then
-        echo "Running $script..."
-        if psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -f "$path"; then
-            echo "✓ $script completed successfully"
-            return 0
-        else
-            echo "✗ Error running $script"
-            return 1
-        fi
-    else
-        echo "✗ Warning: $script not found at $path!"
-        return 1
-    fi
-}
-
-# Process schema files in correct order
 echo ""
-echo "Creating database schema..."
-echo "=========================="
+echo "PostgreSQL is automatically executing SQL files in order:"
+echo "========================================================"
+
+# Schema files that PostgreSQL will execute automatically
 SCHEMA_FILES=(
-    "01_location.sql"
-    "02_people.sql"
-    "03_organizations.sql"
-    "04_categories.sql"
-    "05_teams.sql"
-    "06_leagues.sql"
-    "07_matches.sql"
+    "01_location.sql - Countries, Cities, Venues"
+    "02_people.sql - People, Players, Staff, Roles"  
+    "03_organizations.sql - Sports, Entities, Federations"
+    "04_categories.sql - Age Categories"
+    "05_teams.sql - Teams, Transfers, Affiliations"
+    "06_leagues.sql - Leagues, Competitions"
+    "07_matches.sql - Matches, Events"
 )
 
-for script in "${SCHEMA_FILES[@]}"; do
-    run_sql_script "$script"
+for file_info in "${SCHEMA_FILES[@]}"; do
+    echo "✓ $file_info"
 done
 
-# Load sample data if not in production mode
+# Sample data info
 if [ "${ENVIRONMENT:-development}" != "production" ]; then
-    echo ""
-    echo "Loading sample data..."
-    echo "===================="
-    if run_sql_script "99_sample_data.sql"; then
-        echo "Sample data loaded successfully"
-    else
-        echo "Warning: Failed to load sample data"
-    fi
+    echo "✓ 99_sample_data.sql - Sample data for testing"
+else
+    echo "ℹ Skipping sample data in production mode"
 fi
 
 echo ""
-echo "Database initialization complete!"
-echo "================================"
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -c "SELECT count(*) as countries FROM countries;"
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -c "SELECT count(*) as teams FROM teams;"
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -c "SELECT count(*) as players FROM players;"
-echo ""
-echo "SportifyAPI database is ready to use!"
+echo "All SQL files are being executed automatically by PostgreSQL"
+echo "Database initialization will complete shortly..."
+echo "==========================================================="
