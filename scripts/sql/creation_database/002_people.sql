@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS staff_roles (
     UNIQUE(name)
 );
 
+
 -- Referee roles
 CREATE TABLE IF NOT EXISTS referee_roles (
     id SERIAL PRIMARY KEY,
