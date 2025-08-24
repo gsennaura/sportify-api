@@ -6,7 +6,7 @@ Match tables for SportifyAPI
 */
 
 -- Matches table - individual games/matches
-CREATE TABLE matches (
+CREATE TABLE IF NOT EXISTS matches (
     id SERIAL PRIMARY KEY,
     league_id INTEGER NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
     home_team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
@@ -22,7 +22,7 @@ CREATE TABLE matches (
 );
 
 -- Match squads - players selected for a match
-CREATE TABLE match_squads (
+CREATE TABLE IF NOT EXISTS match_squads (
     id SERIAL PRIMARY KEY,
     match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
     team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
@@ -34,7 +34,7 @@ CREATE TABLE match_squads (
 );
 
 -- Match events - goals, cards, substitutions, etc.
-CREATE TABLE match_events (
+CREATE TABLE IF NOT EXISTS match_events (
     id SERIAL PRIMARY KEY,
     match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
     team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
@@ -48,7 +48,7 @@ CREATE TABLE match_events (
 );
 
 -- Match statistics - team and player statistics
-CREATE TABLE match_statistics (
+CREATE TABLE IF NOT EXISTS match_statistics (
     id SERIAL PRIMARY KEY,
     match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
     team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,

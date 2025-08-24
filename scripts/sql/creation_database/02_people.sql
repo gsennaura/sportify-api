@@ -6,7 +6,7 @@ People and roles tables for SportifyAPI
 */
 
 -- People table - core information for all individuals
-CREATE TABLE people (
+CREATE TABLE IF NOT EXISTS people (
     id SERIAL PRIMARY KEY,
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
@@ -22,20 +22,53 @@ CREATE TABLE people (
 CREATE INDEX idx_people_name ON people(last_name, first_name);
 CREATE INDEX idx_people_birth_date ON people(birth_date);
 
+-- Player positions table
+CREATE TABLE IF NOT EXISTS player_positions (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT
+);
+
+-- Insert default soccer positions (in Portuguese)
+INSERT INTO player_positions (name, description) VALUES
+    ('Goleiro', 'Responsável por defender o gol'),
+    ('Lateral Direito', 'Defensor pelo lado direito'),
+    ('Zagueiro', 'Defensor central'),
+    ('Lateral Esquerdo', 'Defensor pelo lado esquerdo'),
+    ('Volante', 'Meio-campista defensivo'),
+    ('Meio-campista', 'Jogador central do meio-campo'),
+    ('Meia Ofensivo', 'Meio-campista ofensivo'),
+    ('Ponta Direita', 'Atacante pelo lado direito'),
+    ('Atacante', 'Jogador de ataque'),
+    ('Ponta Esquerda', 'Atacante pelo lado esquerdo'),
+    ('Centroavante', 'Atacante central')
+ON CONFLICT (name) DO NOTHING;
+
 -- Player-specific attributes
-CREATE TABLE players (
+CREATE TABLE IF NOT EXISTS players (
     id SERIAL PRIMARY KEY,
     person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
     height DECIMAL(5,2), -- in cm
     weight DECIMAL(5,2), -- in kg
     dominant_foot VARCHAR(10) CHECK (dominant_foot IN ('left', 'right', 'both')),
-    position VARCHAR(50),
+    position_id INTEGER REFERENCES player_positions(id) ON DELETE SET NULL,
+    active BOOLEAN DEFAULT true,
+    UNIQUE(person_id)
+);
+
+-- Staff-specific attributes (extends people)
+CREATE TABLE IF NOT EXISTS staff (
+    id SERIAL PRIMARY KEY,
+    person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+    main_role_id INTEGER REFERENCES role_types(id) ON DELETE SET NULL, -- Main function/role of the staff
+    document_number VARCHAR(30), -- Optional: staff-specific document/registration
+    notes TEXT, -- Optional: extra info about the staff
     active BOOLEAN DEFAULT true,
     UNIQUE(person_id)
 );
 
 -- Role types (used for both team and federation staff)
-CREATE TABLE role_types (
+CREATE TABLE IF NOT EXISTS role_types (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
     description TEXT,
@@ -46,21 +79,22 @@ CREATE TABLE role_types (
 
 -- Insert common role types
 INSERT INTO role_types (name, description, category) VALUES
-    ('Player', 'Active player on the field', 'player'),
-    ('Head Coach', 'Main team coach', 'technical'),
-    ('Assistant Coach', 'Assistant to the head coach', 'technical'),
-    ('Physical Trainer', 'Responsible for physical conditioning', 'technical'),
-    ('Team Doctor', 'Medical professional for the team', 'medical'),
-    ('Physiotherapist', 'Handles injuries and recovery', 'medical'),
-    ('President', 'Organization president', 'management'),
-    ('Vice President', 'Second in command', 'management'),
-    ('Director', 'Department director', 'management'),
-    ('Technical Director', 'Oversees technical aspects', 'management'),
-    ('Team Manager', 'Day-to-day team management', 'administrative'),
-    ('Secretary', 'Administrative support', 'administrative');
+    ('Jogador', 'Jogador ativo em campo', 'player'),
+    ('Técnico Principal', 'Técnico principal do time', 'technical'),
+    ('Auxiliar Técnico', 'Auxiliar do técnico principal', 'technical'),
+    ('Preparador Físico', 'Responsável pelo condicionamento físico', 'technical'),
+    ('Médico do Time', 'Profissional médico do time', 'medical'),
+    ('Fisioterapeuta', 'Cuida de lesões e recuperação', 'medical'),
+    ('Presidente', 'Presidente da organização', 'management'),
+    ('Vice-Presidente', 'Segundo no comando', 'management'),
+    ('Diretor', 'Diretor de departamento', 'management'),
+    ('Diretor Técnico', 'Supervisiona aspectos técnicos', 'management'),
+    ('Gerente de Time', 'Gestão do dia a dia do time', 'administrative'),
+    ('Secretário', 'Apoio administrativo', 'administrative')
+ON CONFLICT (name) DO NOTHING;
 
 -- Contact information for people
-CREATE TABLE contact_info (
+CREATE TABLE IF NOT EXISTS contact_info (
     id SERIAL PRIMARY KEY,
     person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
     type VARCHAR(20) NOT NULL CHECK (type IN ('email', 'phone', 'address', 'social')),
@@ -71,5 +105,7 @@ CREATE TABLE contact_info (
 
 -- Add comments for documentation
 COMMENT ON TABLE players IS 'Extended attributes specific to athletes';
+COMMENT ON TABLE staff IS 'Staff members (coaches, directors, etc), extends people';
 COMMENT ON TABLE role_types IS 'Different roles people can have in teams or federations';
 COMMENT ON TABLE contact_info IS 'Contact information for people';
+COMMENT ON TABLE player_positions IS 'Possible positions/functions for players (e.g., Atacante, Meio-campista, Zagueiro, etc)';

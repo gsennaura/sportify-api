@@ -6,7 +6,7 @@ League tables for SportifyAPI
 */
 
 -- Leagues table - competitions organized by federations
-CREATE TABLE leagues (
+CREATE TABLE IF NOT EXISTS leagues (
     id SERIAL PRIMARY KEY,
     name VARCHAR(150) NOT NULL,
     season_year INTEGER NOT NULL,
@@ -23,17 +23,17 @@ CREATE TABLE leagues (
 );
 
 -- League teams - teams participating in leagues
-CREATE TABLE league_teams (
+CREATE TABLE IF NOT EXISTS league_teams (
     id SERIAL PRIMARY KEY,
     league_id INTEGER NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
-    team_category_id INTEGER NOT NULL REFERENCES team_categories(id) ON DELETE CASCADE,
+    team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
     registration_date DATE DEFAULT CURRENT_DATE,
     status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'withdrawn', 'disqualified')),
-    UNIQUE(league_id, team_category_id)
+    UNIQUE(league_id, team_id)
 );
 
 -- Eligibility rules for player participation
-CREATE TABLE eligibility_rules (
+CREATE TABLE IF NOT EXISTS eligibility_rules (
     id SERIAL PRIMARY KEY,
     federation_id INTEGER REFERENCES federations(id) ON DELETE CASCADE,
     league_id INTEGER REFERENCES leagues(id) ON DELETE CASCADE,
@@ -47,7 +47,7 @@ CREATE TABLE eligibility_rules (
 );
 
 -- League relationships for cross-league eligibility
-CREATE TABLE league_relationships (
+CREATE TABLE IF NOT EXISTS league_relationships (
     id SERIAL PRIMARY KEY,
     league_id INTEGER NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
     related_league_id INTEGER NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
