@@ -1,25 +1,79 @@
+"""Create Country Use Case."""
+
+from dataclasses import dataclass
 from typing import Optional
-from sportifyapi.domain.entities.country import Country
-from sportifyapi.infrastructure.database.unit_of_work import UnitOfWork
-from sportifyapi.infrastructure.database.repositories.country_repository import (
-    CountryRepository,
-)
-from sportifyapi.api.schemas.country.country_schema import CountryCreateRequest
+
+from ...domain.entities.country import Country
+from ...domain.repositories.country_repository import CountryRepository
+from ...domain.value_objects.iso_code import ISOCode
+
+
+@dataclass
+class CreateCountryRequest:
+    """Request DTO for creating a country."""
+    name: str
+    iso_code: str
+
+
+@dataclass
+class CreateCountryResponse:
+    """Response DTO for country creation."""
+    id: int
+    name: str
+    iso_code: str
+    is_active: bool
+    message: str = "Country created successfully"
 
 
 class CreateCountryUseCase:
-    """Use case to create a new country."""
-
-    def __init__(self, uow: UnitOfWork):
-        self.uow = uow
-
-    async def execute(self, input_data: CountryCreateRequest) -> Optional[Country]:
-        country_repo: CountryRepository = self.uow.get_repository(CountryRepository)
-
-        # Check if country already exists
-        existing = await country_repo.get_by_iso_code(input_data.iso_code)
-        if existing:
-            return None
-
-        country = Country(id=None, name=input_data.name, iso_code=input_data.iso_code)
-        return await country_repo.create(country)
+    """
+    Use Case: Create a new country.
+    
+    Business Rules:
+    - Country name must be valid (2-100 characters)
+    - ISO code must be valid (2 uppercase letters)
+    - ISO code must be unique
+    - Country is created as active by default
+    """
+    
+    def __init__(self, country_repository: CountryRepository):
+        self._country_repository = country_repository
+    
+    async def execute(self, request: CreateCountryRequest) -> CreateCountryResponse:
+        """
+        Execute the create country use case.
+        
+        Args:
+            request: Create country request data
+            
+        Returns:
+            CreateCountryResponse with created country data
+            
+        Raises:
+            ValueError: If business rules are violated
+        """
+        # 1. Create value objects (validates format)
+        iso_code = ISOCode.from_string(request.iso_code)
+        
+        # 2. Check business rule: ISO code must be unique
+        if await self._country_repository.exists_by_iso_code(iso_code):
+            raise ValueError(f"Country with ISO code '{iso_code}' already exists")
+        
+        # 3. Create domain entity (validates business rules)
+        country = Country(
+            id=None,
+            name=request.name,
+            iso_code=iso_code,
+            is_active=True
+        )
+        
+        # 4. Save through repository
+        saved_country = await self._country_repository.save(country)
+        
+        # 5. Return response DTO
+        return CreateCountryResponse(
+            id=saved_country.id,
+            name=saved_country.name,
+            iso_code=str(saved_country.iso_code),
+            is_active=saved_country.is_active
+        )

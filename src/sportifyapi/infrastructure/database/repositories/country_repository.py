@@ -1,86 +1,134 @@
-# src/sportifyapi/infrastructure/database/repositories/country_repository.py
+"""Country Repository Implementation."""
 
-from typing import Optional, List
+from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
-from sportifyapi.domain.entities.country import Country
-from sportifyapi.domain.repositories.country_repository_interface import (
-    CountryRepositoryInterface,
-)
-from sportifyapi.infrastructure.database.models.models import Countries as CountryModel
-from sportifyapi.infrastructure.database.repositories.base_repository import (
-    BaseRepository,
-)
+from ...domain.entities.country import Country
+from ...domain.repositories.country_repository import CountryRepository
+from ...domain.value_objects.iso_code import ISOCode
+from ..models.country import CountryModel
 
 
-class CountryRepository(CountryRepositoryInterface):
+class SQLCountryRepository(CountryRepository):
     """
-    Concrete implementation of the CountryRepositoryInterface using SQLAlchemy.
+    SQLAlchemy implementation of CountryRepository.
+    
+    This is the INFRASTRUCTURE implementation that knows about:
+    - SQLAlchemy
+    - Database sessions
+    - SQL queries
+    - Error handling
     """
-
+    
     def __init__(self, session: AsyncSession):
-        self.session = session
-        self.base_repo = BaseRepository[CountryModel](CountryModel, session)
-
-    async def get_by_id(self, country_id: int) -> Optional[Country]:
-        country_model = await self.base_repo.get_by_id(country_id)
-        return self._to_entity(country_model) if country_model else None
-
-    async def get_all(self) -> List[Country]:
-        country_models = await self.base_repo.get_all()
-        return [self._to_entity(model) for model in country_models]
-
-    async def get_by_iso_code(self, iso_code: str) -> Optional[Country]:
-        """
-        Retrieve a country by its ISO code.
-        """
-        stmt = select(CountryModel).where(CountryModel.iso_code == iso_code)
-        result = await self.session.execute(stmt)
-        model = result.scalar_one_or_none()
-        return self._to_entity(model) if model else None
-
-    async def create(self, country: Country) -> Country:
-        """
-        Persist a new country to the database.
-        """
-        model = CountryModel(
-            id=country.id,
+        self._session = session
+    
+    async def save(self, country: Country) -> Country:
+        """Save a country entity to database."""
+        # Convert domain entity to database model
+        db_country = CountryModel(
             name=country.name,
-            iso_code=country.iso_code,
+            iso_code=str(country.iso_code),
+            active=country.is_active
         )
-        created = await self.base_repo.create(model)
-        return self._to_entity(created)
-
-    async def delete(self, country_id: int) -> Optional[Country]:
-        model = await self.base_repo.get_by_id(country_id)
-        if not model:
-            return None
-
-        await self.base_repo.delete(country_id)
-        return self._to_entity(model)
-
-    async def update(self, country_id: int, update_data: dict) -> Optional[Country]:
-        """
-        Update an existing country record by ID with the provided fields.
-        Returns the updated Country entity or None if not found.
-        """
-        updated_model = await self.base_repo.update(country_id, update_data)
-        return self._to_entity(updated_model) if updated_model else None
-
-    def _to_entity(self, model: CountryModel) -> Country:
-        """
-        Map SQLAlchemy model to domain entity.
-        """
+        
+        try:
+            self._session.add(db_country)
+            await self._session.flush()  # Get the ID without committing
+            
+            # Convert back to domain entity
+            return self._model_to_entity(db_country)
+            
+        except IntegrityError as e:
+            await self._session.rollback()
+            if "unique constraint" in str(e).lower():
+                raise ValueError(f"Country with ISO code '{country.iso_code}' already exists")
+            raise ValueError(f"Error saving country: {str(e)}")
+    
+    async def find_by_id(self, country_id: int) -> Optional[Country]:
+        """Find country by ID."""
+        stmt = select(CountryModel).where(CountryModel.id == country_id)
+        result = await self._session.execute(stmt)
+        db_country = result.scalar_one_or_none()
+        
+        if db_country:
+            return self._model_to_entity(db_country)
+        return None
+    
+    async def find_by_iso_code(self, iso_code: ISOCode) -> Optional[Country]:
+        """Find country by ISO code."""
+        stmt = select(CountryModel).where(CountryModel.iso_code == str(iso_code))
+        result = await self._session.execute(stmt)
+        db_country = result.scalar_one_or_none()
+        
+        if db_country:
+            return self._model_to_entity(db_country)
+        return None
+    
+    async def find_all(self, active_only: bool = False) -> List[Country]:
+        """Find all countries."""
+        stmt = select(CountryModel)
+        
+        if active_only:
+            stmt = stmt.where(CountryModel.active == True)
+        
+        stmt = stmt.order_by(CountryModel.name)
+        
+        result = await self._session.execute(stmt)
+        db_countries = result.scalars().all()
+        
+        return [self._model_to_entity(db_country) for db_country in db_countries]
+    
+    async def update(self, country: Country) -> Country:
+        """Update existing country."""
+        stmt = select(CountryModel).where(CountryModel.id == country.id)
+        result = await self._session.execute(stmt)
+        db_country = result.scalar_one_or_none()
+        
+        if not db_country:
+            raise ValueError(f"Country with ID {country.id} not found")
+        
+        # Update fields
+        db_country.name = country.name
+        db_country.iso_code = str(country.iso_code)
+        db_country.active = country.is_active
+        
+        try:
+            await self._session.flush()
+            return self._model_to_entity(db_country)
+            
+        except IntegrityError as e:
+            await self._session.rollback()
+            if "unique constraint" in str(e).lower():
+                raise ValueError(f"Country with ISO code '{country.iso_code}' already exists")
+            raise ValueError(f"Error updating country: {str(e)}")
+    
+    async def delete(self, country_id: int) -> bool:
+        """Delete country by ID."""
+        stmt = select(CountryModel).where(CountryModel.id == country_id)
+        result = await self._session.execute(stmt)
+        db_country = result.scalar_one_or_none()
+        
+        if db_country:
+            await self._session.delete(db_country)
+            return True
+        return False
+    
+    async def exists_by_iso_code(self, iso_code: ISOCode) -> bool:
+        """Check if country exists by ISO code."""
+        stmt = select(CountryModel.id).where(CountryModel.iso_code == str(iso_code))
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none() is not None
+    
+    def _model_to_entity(self, db_country: CountryModel) -> Country:
+        """Convert database model to domain entity."""
         return Country(
-            id=model.id,
-            name=model.name,
-            iso_code=model.iso_code,
-        )
-
-    def _to_model(self, entity: Country) -> CountryModel:
-        return CountryModel(
-            id=entity.id,
-            name=entity.name,
-            iso_code=entity.iso_code,
+            id=db_country.id,
+            name=db_country.name,
+            iso_code=ISOCode(db_country.iso_code),
+            is_active=db_country.active,
+            created_at=db_country.created_at,
+            updated_at=db_country.updated_at
         )

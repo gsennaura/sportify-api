@@ -1,25 +1,52 @@
+"""Database configuration and session management."""
+
+import os
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
 from typing import AsyncGenerator
 
-from sqlalchemy.ext.asyncio import (AsyncSession, async_sessionmaker,
-                                    create_async_engine)
-from sqlalchemy.orm import declarative_base
 
-from .config import config
+class DatabaseConfig:
+    """Database configuration."""
+    
+    def __init__(self):
+        self.database_url = os.getenv(
+            "DATABASE_URL", 
+            "postgresql+asyncpg://postgres:postgres@localhost:5432/sportify"
+        )
+        
+        # Create async engine
+        self.engine = create_async_engine(
+            self.database_url,
+            echo=os.getenv("SQL_ECHO", "false").lower() == "true",
+            future=True
+        )
+        
+        # Create session factory
+        self.SessionLocal = sessionmaker(
+            bind=self.engine,
+            class_=AsyncSession,
+            expire_on_commit=False
+        )
+    
+    async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
+        """Get database session."""
+        async with self.SessionLocal() as session:
+            try:
+                yield session
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
+            finally:
+                await session.close()
 
-# Set up database URL from the config
-DATABASE_URL = config.DATABASE_URL
 
-# Create the async engine for database connection
-engine = create_async_engine(DATABASE_URL, echo=True)
-
-# Create the session maker for handling database sessions
-async_session = async_sessionmaker(engine, expire_on_commit=False)
-
-# Declarative base class for the ORM models
-Base = declarative_base()
+# Global database config instance
+db_config = DatabaseConfig()
 
 
-# Function to get a session for database transactions
-async def get_session() -> AsyncGenerator[AsyncSession, None]:
-    async with async_session() as session:
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+    """Dependency to get database session."""
+    async for session in db_config.get_session():
         yield session
