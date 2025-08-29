@@ -5,10 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from ...domain.entities.country import Country
-from ...domain.repositories.country_repository import CountryRepository
-from ...domain.value_objects.iso_code import ISOCode
-from ..models.country import CountryModel
+from ....domain.entities.country import Country
+from ....domain.repositories.country_repository import CountryRepository
+from ....domain.value_objects.iso_code import ISOCode
+from ..models.generated_models import Countries as CountryModel
 
 
 class SQLCountryRepository(CountryRepository):

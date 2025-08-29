@@ -3,8 +3,8 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from ...domain.entities.country import Country
-from ...domain.repositories.country_repository import CountryRepository
+from ....domain.entities.country import Country
+from ....domain.repositories.country_repository import CountryRepository
 
 
 @dataclass

@@ -3,9 +3,9 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from ...domain.entities.country import Country
-from ...domain.repositories.country_repository import CountryRepository
-from ...domain.value_objects.iso_code import ISOCode
+from ....domain.entities.country import Country
+from ....domain.repositories.country_repository import CountryRepository
+from ....domain.value_objects.iso_code import ISOCode
 
 
 @dataclass

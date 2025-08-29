@@ -391,15 +391,11 @@ async def test_create_country_endpoint():
 
 ### **1. Database Setup:**
 ```bash
-# Initialize Alembic
-make migrate-init
+# Start the database and API
+make up
 
-# Configure env.py with your models
-# Create first migration
-make migration msg="Add countries table"
-
-# Apply migration
-make migrate
+# Generate models from existing database schema
+make generate-models
 ```
 
 ### **2. Add More Entities:**

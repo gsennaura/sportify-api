@@ -1,7 +1,7 @@
 import pytest
 from sportifyapi.application.use_cases.country.create_country import CreateCountryUseCase
 from sportifyapi.domain.entities.country import Country
-from sportifyapi.api.schemas.country.country_schema import CountryCreateRequest
+from sportifyapi.api.schemas.country import CountryCreateRequest
 from tests.unit.fakes.country.fake_country_repository import FakeCountryRepository
 from tests.unit.fakes.country.fake_unit_of_work import FakeUnitOfWork
 

@@ -1,5 +1,43 @@
 """SQLAlchemy Base Configuration."""
 
-from sqlalchemy.ext.declarative import declarative_base
+# Import Base and all models from generated_models
+from .generated_models import (
+    Base,
+    Countries,
+    States,
+    Cities,
+    Sports,
+    Federations,
+    People,
+    Athletes,
+    Staff,
+    Referees,
+    Clubs,
+    AthletePositions,
+    RefereeRoles,
+    StaffRoles,
+    ClubAthleteAssignments,
+    ClubStaffAssignments,
+    FederationStaffAssignments,
+)
 
-Base = declarative_base()
+# Re-export for convenience
+__all__ = [
+    "Base",
+    "Countries",
+    "States", 
+    "Cities",
+    "Sports",
+    "Federations",
+    "People",
+    "Athletes",
+    "Staff",
+    "Referees",
+    "Clubs",
+    "AthletePositions",
+    "RefereeRoles",
+    "StaffRoles",
+    "ClubAthleteAssignments",
+    "ClubStaffAssignments",
+    "FederationStaffAssignments",
+]

@@ -34,9 +34,7 @@ Pipfile.lock
 # Ignore environment variables and credentials
 .env
 
-# Ignore database and migration files
-migrations/
-alembic.ini
+# Ignore database files
 
 # Ignore Docker-related files
 *.db

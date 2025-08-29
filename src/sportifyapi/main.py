@@ -1,12 +1,3 @@
-from fastapi import FastAPI
-
-app = FastAPI(
-    title="Tournament API",
-    description="An API for managing tournaments",
-    version="0.1.0",
-)
-
-
 """Sportify API - Main application entry point."""
 
 from fastapi import FastAPI
